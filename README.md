@@ -26,15 +26,21 @@ Block-Puzzle mit Pokerhänden für [bens-games.de](https://bens-games.de) – wi
 - **Serie:** Abräumen in aufeinanderfolgenden Zügen → ×1,5 / ×2 / ×2,5 …; die Serie hält 2 Züge ohne Abräumen aus.
 - **Tisch leer:** Feld komplett leer → +2000 (× Serie).
 - +1 Punkt pro gesetztem Kästchen. Spielende, wenn keins der übrigen Teile mehr passt.
+- **Hilfreiches Austeilen** (wie bei Block Blast): In 60 % der Fälle werden 5 Sätze Teile ausprobiert und der genommen,
+  mit dem sich die meisten Reihen abräumen lassen. Neue Karten passen öfter zu fast vollen Reihen (Farbe 35 %, Wert 30 %).
+  Laut Simulation: Runden etwa 50 % länger, mehr als doppelt so viele Punkte. Leere Felder in fast vollen Reihen leuchten.
 - **Joker ★:** etwa jedes 25. Teil hat ein Joker-Kästchen, das als die Karte zählt, die die beste Hand ergibt.
 - **Chips** (bleiben über alle Runden): pro abgeräumter Reihe so viele wie der Faktor der Hand, +25 bei „Tisch leer“,
-  dazu Belohnungen für Aufträge. Eine Runde bringt laut Simulation etwa 250–350 Chips.
+  dazu Belohnungen für Aufträge. Eine Runde bringt laut Simulation etwa 500–650 Chips.
 - **Spezialzüge:** Passen (60, drei neue Teile), Farbe tauschen (40), Sprengen (120, gesperrte Reihe entfernen).
   Am Spielende kann man sich mit Passen oder Sprengen retten.
 - **Aufträge:** immer ein Ziel sichtbar (Hand ab X, Flush in Farbe, Kombo, Serie); geschafft → Chips und neues, schwereres Ziel.
 - **„Fast!“:** fehlte genau eine Karte zu Straße, Flush oder Royal Flush, wird das angezeigt.
 - **Tages-Challenge:** gleicher Startwert für alle an einem Tag (aus dem Datum), beliebig oft spielbar, eigener Tagesrekord.
   Der Zufall liegt im Spielstand, deshalb bleibt die Folge auch nach Neuladen gleich.
+- **Gefühl:** Plopp-Kette (jedes Kästchen ein steigender Ton), Punkte fliegen zur Anzeige.
+- **Vibration:** Android über die Vibrations-Schnittstelle; iPhone (ab iOS 18) über einen versteckten Schalter,
+  der ein kurzes haptisches Tippen auslöst – mehr erlaubt Safari Webseiten nicht.
 - **Musik:** im Browser erzeugter Synthwave-Takt, wird mit der Serie voller; eigener Schalter im Menü.
 - **Designs** (mit Chips freischaltbar): Farbwelten Neon, Gold-Casino (800), Eis (1.500), Retro-Arcade (2.500);
   Kachel-Stile Standard, Glas (600), Pixel (1.200), Chip (2.000).
