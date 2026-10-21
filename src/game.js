@@ -10,6 +10,21 @@ export const STREAK_GRACE = 3; // so viele Züge ohne Abräumen beendet die Seri
 export const TABLE_CLEAR_BONUS = 2000; // Feld komplett leer
 const DEAL_ATTEMPTS = 25;
 
+// Mindesthand: Eine volle Reihe verschwindet nur, wenn ihre Pokerhand mindestens so stark ist.
+// Die Anforderung steigt mit der Zahl der abgeräumten Reihen (level = Index in HANDS).
+export const REQUIREMENTS = [
+  { lines: 0, level: 1 }, // Paar
+  { lines: 10, level: 2 }, // Zwei Paare
+  { lines: 35, level: 3 }, // Drilling
+];
+
+export function requirementFor(lines) {
+  let current = REQUIREMENTS[0];
+  for (const step of REQUIREMENTS) if (lines >= step.lines) current = step;
+  const next = REQUIREMENTS[REQUIREMENTS.indexOf(current) + 1] ?? null;
+  return { level: current.level, next };
+}
+
 export const idx = (x, y) => y * SIZE + x;
 
 export function createGame(rng) {
@@ -50,8 +65,8 @@ export function dealTray(board, rng) {
   return tray;
 }
 
-// Welche Reihen und Spalten wären voll? Funktioniert auf jedem Feld (auch für die Vorschau).
-export function findFullLines(board) {
+// Alle vollen Reihen und Spalten mit ihrer Pokerhand. ok = stark genug zum Abräumen.
+export function findFullLines(board, requiredLevel = 0) {
   const lines = [];
   for (let y = 0; y < SIZE; y++) {
     const cells = Array.from({ length: SIZE }, (_, x) => idx(x, y));
@@ -64,18 +79,29 @@ export function findFullLines(board) {
   for (const line of lines) {
     line.hand = evaluateHand(line.cells.map((i) => board[i]));
     line.handCells = line.hand.used.map((k) => line.cells[k]);
+    line.ok = line.hand.level >= requiredLevel;
   }
   return lines;
 }
 
+// Volle Reihen, die durch einen Zug neu entstehen (alte, blockierte Reihen zählen nicht noch einmal).
+function linesThrough(board, cells, requiredLevel) {
+  const touched = new Set(cells);
+  return findFullLines(board, requiredLevel).filter((line) => line.cells.some((i) => touched.has(i)));
+}
+
 export const streakMultiplier = (streak) => (streak > 1 ? 1 + 0.5 * (streak - 1) : 1);
 
-// Vorschau für die Anzeige: welche Reihen würde dieser Zug abräumen?
-export function previewPlacement(board, piece, x, y) {
-  if (!canPlace(board, piece, x, y)) return null;
-  const next = board.slice();
-  piece.cells.forEach(([dx, dy], k) => (next[idx(x + dx, y + dy)] = piece.cards[k]));
-  return findFullLines(next);
+// Vorschau für die Anzeige: welche Reihen würde dieser Zug füllen, und reicht die Hand?
+export function previewPlacement(state, piece, x, y) {
+  if (!canPlace(state.board, piece, x, y)) return null;
+  const next = state.board.slice();
+  const cells = piece.cells.map(([dx, dy], k) => {
+    const i = idx(x + dx, y + dy);
+    next[i] = piece.cards[k];
+    return i;
+  });
+  return linesThrough(next, cells, requirementFor(state.lines).level);
 }
 
 export function placePiece(state, slot, x, y, rng) {
@@ -90,7 +116,11 @@ export function placePiece(state, slot, x, y, rng) {
   state.tray[slot] = null;
   state.moves++;
 
-  const lines = findFullLines(state.board);
+  const required = requirementFor(state.lines).level;
+  const full = linesThrough(state.board, placed, required);
+  const lines = full.filter((line) => line.ok);
+  const blocked = full.filter((line) => !line.ok);
+
   const removed = new Map(); // Index -> Karte, damit die Anzeige die verschwindenden Karten zeigen kann
   for (const line of lines) for (const i of line.cells) removed.set(i, state.board[i]);
   for (const i of removed.keys()) state.board[i] = null;
@@ -118,6 +148,8 @@ export function placePiece(state, slot, x, y, rng) {
     placed.length + Math.round(linePoints * combo * streakMult) + (tableClear ? Math.round(TABLE_CLEAR_BONUS * streakMult) : 0);
   state.score += points;
 
+  const levelUp = requirementFor(state.lines).level > required;
+
   let dealt = false;
   if (state.tray.every((p) => p === null)) {
     state.tray = dealTray(state.board, rng);
@@ -125,5 +157,5 @@ export function placePiece(state, slot, x, y, rng) {
   }
   state.over = !state.tray.some((p) => p && fitsAnywhere(state.board, p));
 
-  return { placed, lines, removed, combo, streak: state.streak, streakMult, tableClear, points, dealt, over: state.over };
+  return { placed, lines, blocked, removed, combo, streak: state.streak, streakMult, tableClear, points, levelUp, dealt, over: state.over };
 }

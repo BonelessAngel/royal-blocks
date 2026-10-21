@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  CELL_POINTS, SIZE, STREAK_GRACE, TABLE_CLEAR_BONUS, canPlace, createGame, findFullLines, fitsAnywhere, idx, placePiece,
+  CELL_POINTS, REQUIREMENTS, SIZE, STREAK_GRACE, TABLE_CLEAR_BONUS, canPlace, createGame, findFullLines, fitsAnywhere, idx, placePiece,
+  previewPlacement, requirementFor,
 } from '../src/game.js';
-import { SHAPES, seededRng } from '../src/pieces.js';
+import { SHAPES, randomPiece, seededRng } from '../src/pieces.js';
 
 const card = (r, s) => ({ r, s });
 const single = (c = card(2, 0)) => ({ shape: 0, w: 1, h: 1, cells: [[0, 0]], cards: [c] });
@@ -137,4 +138,81 @@ test('findFullLines markiert die Karten der Hand', () => {
   const [line] = findFullLines(board);
   assert.equal(line.hand.id, 'pair');
   assert.deepEqual([...line.handCells].sort((a, b) => a - b), [idx(0, 2), idx(1, 2)]);
+});
+
+test('jedes Teil hat genau eine Farbe', () => {
+  const rng = seededRng(9);
+  for (let k = 0; k < 200; k++) {
+    const piece = randomPiece(rng);
+    assert.equal(new Set(piece.cards.map((c) => c.s)).size, 1);
+  }
+});
+
+test('Mindesthand steigt mit den abgeräumten Reihen', () => {
+  assert.equal(requirementFor(0).level, 1);
+  for (const step of REQUIREMENTS) assert.equal(requirementFor(step.lines).level, step.level);
+  assert.equal(requirementFor(REQUIREMENTS[1].lines - 1).level, REQUIREMENTS[0].level);
+  assert.deepEqual(requirementFor(0).next, REQUIREMENTS[1]);
+  assert.equal(requirementFor(9999).next, null);
+  for (let k = 1; k < REQUIREMENTS.length; k++) {
+    assert.ok(REQUIREMENTS[k].lines > REQUIREMENTS[k - 1].lines && REQUIREMENTS[k].level > REQUIREMENTS[k - 1].level);
+  }
+});
+
+// Reihe 0 mit lauter verschiedenen Werten und Farben → nur "Hohe Karte"
+const weakRow = [card(2, 0), card(4, 1), card(6, 2), card(8, 3), card(10, 0), card(12, 1), card(3, 2)];
+
+test('zu schwache Reihe bleibt gesperrt liegen', () => {
+  const game = emptyGame([single(card(13, 3)), single(), single()]);
+  weakRow.forEach((c, x) => (game.board[idx(x, 0)] = c));
+  const res = placePiece(game, 0, 7, 0, seededRng(1));
+  assert.equal(res.lines.length, 0);
+  assert.equal(res.blocked.length, 1);
+  assert.equal(res.blocked[0].hand.id, 'high');
+  assert.ok(Array.from({ length: 8 }, (_, x) => game.board[idx(x, 0)]).every(Boolean), 'Reihe ist noch da');
+  assert.equal(game.lines, 0);
+  assert.equal(res.points, 1);
+});
+
+test('Vorschau meldet, ob die Hand reicht', () => {
+  const game = emptyGame([single(card(13, 3)), single(card(2, 3)), single()]);
+  weakRow.forEach((c, x) => (game.board[idx(x, 0)] = c));
+  const [weak] = previewPlacement(game, game.tray[0], 7, 0);
+  assert.equal(weak.ok, false);
+  const [pair] = previewPlacement(game, game.tray[1], 7, 0);
+  assert.equal(pair.hand.id, 'pair');
+  assert.equal(pair.ok, true);
+});
+
+test('höhere Mindesthand sperrt ein Paar', () => {
+  const game = emptyGame([single(card(2, 3)), single(), single()]);
+  game.lines = REQUIREMENTS[1].lines; // Zwei Paare nötig
+  weakRow.forEach((c, x) => (game.board[idx(x, 0)] = c));
+  const res = placePiece(game, 0, 7, 0, seededRng(1));
+  assert.equal(res.blocked.length, 1);
+  assert.equal(res.blocked[0].hand.id, 'pair');
+});
+
+test('eine quer abgeräumte Reihe öffnet die gesperrte Reihe wieder', () => {
+  const game = emptyGame([single(card(9, 1)), single(), single()]);
+  // gesperrte Reihe 0
+  weakRow.forEach((c, x) => (game.board[idx(x, 0)] = c));
+  game.board[idx(7, 0)] = card(13, 3);
+  // Spalte 7 fast voll mit Herz → Flush, wenn Feld (7,7) gesetzt wird
+  for (let y = 1; y < 7; y++) game.board[idx(7, y)] = card(2 + y, 1);
+  const res = placePiece(game, 0, 7, 7, seededRng(1));
+  assert.equal(res.lines.length, 1);
+  assert.equal(res.lines[0].type, 'col');
+  assert.equal(game.board[idx(7, 0)], null, 'Lücke in der gesperrten Reihe');
+  assert.equal(res.blocked.length, 0, 'alte gesperrte Reihe wird nicht erneut gemeldet');
+});
+
+test('Aufstieg der Mindesthand wird gemeldet', () => {
+  const game = emptyGame([single(card(14, 3)), single(), single()]);
+  game.lines = REQUIREMENTS[1].lines - 1;
+  [card(14, 0), card(14, 1), card(5, 2), card(5, 3), card(9, 0), card(11, 1), card(3, 2)].forEach((c, x) => (game.board[idx(x, 0)] = c));
+  game.board[idx(0, 5)] = card(7, 0);
+  const res = placePiece(game, 0, 7, 0, seededRng(1));
+  assert.equal(res.lines.length, 1);
+  assert.equal(res.levelUp, true);
 });

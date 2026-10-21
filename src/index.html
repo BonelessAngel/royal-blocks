@@ -30,6 +30,12 @@
       </button>
     </header>
 
+    <div id="req" class="req">
+      <span class="req-label">Mindesthand</span>
+      <span id="req-hand" class="req-hand">Paar</span>
+      <span id="req-next" class="req-next"></span>
+    </div>
+
     <div id="preview" class="preview" aria-live="polite"></div>
 
     <main class="board-wrap">
@@ -73,11 +79,13 @@
       <h2>So geht's</h2>
       <ol class="rules">
         <li>Zieh die Teile von unten auf das Feld.</li>
-        <li>Ist eine Reihe oder Spalte voll, wird sie zur <b>Pokerhand</b> – und verschwindet.</li>
+        <li>Ist eine Reihe oder Spalte voll, wird sie zur <b>Pokerhand</b>. Aus ihren 8 Karten zählen die besten 5.</li>
+        <li>Sie verschwindet nur, wenn sie mindestens die <b>Mindesthand</b> (oben) schafft. Sonst bleibt sie <b>gesperrt</b> liegen – bis eine Reihe quer durch sie abgeräumt wird.</li>
+        <li>Die Mindesthand steigt: Paar → Zwei Paare → Drilling.</li>
+        <li>Jedes Teil hat eine Farbe: 5 gleiche Farben in einer Reihe sind ein <b>Flush</b>.</li>
         <li>Je besser die Hand, desto mehr Punkte. Mehrere Reihen auf einmal und Serien geben Extra-Faktoren.</li>
         <li>Passt kein Teil mehr, ist die Runde vorbei.</li>
       </ol>
-      <p class="small">Aus den 8 Karten einer Reihe zählen die besten 5.</p>
       <table class="hands" id="hand-table"></table>
       <button class="btn primary" data-action="resume" type="button">Los geht's</button>
     </div>

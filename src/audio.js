@@ -67,6 +67,15 @@ export const sounds = {
       for (let k = 0; k < 6; k++) tone(note(base + 10 + k), { start: 0.35 + k * 0.04, dur: 0.12, type: 'square', vol: 0.05 });
     }
   },
+  blocked() {
+    tone(110, { dur: 0.35, type: 'sawtooth', vol: 0.18, slide: 0.7 });
+    tone(116, { start: 0.02, dur: 0.35, type: 'square', vol: 0.08, slide: 0.7 });
+    tone(80, { start: 0.12, dur: 0.3, type: 'triangle', vol: 0.4, slide: 0.8 });
+  },
+  levelUp() {
+    [0, 2, 4, 5, 7].forEach((s, k) => tone(note(5 + s), { start: k * 0.09, dur: 0.3, type: 'square', vol: 0.12 }));
+    tone(note(15), { start: 0.5, dur: 0.6, type: 'triangle', vol: 0.35 });
+  },
   tableClear() {
     for (let k = 0; k < 10; k++) tone(note(8 + k), { start: k * 0.06, dur: 0.3, type: 'triangle', vol: 0.3 });
   },

@@ -5,8 +5,13 @@ Block-Puzzle mit Pokerhänden für [bens-games.de](https://bens-games.de) – wi
 ## Spielregeln
 
 - Feld 8×8, unten liegen immer 3 Teile. Teile per Finger/Maus aufs Feld ziehen.
-- Jedes Kästchen trägt eine Karte (2 bis Ass, ♠ ♥ ♦ ♣, volles Deck, alle Karten gleich wahrscheinlich).
-- Volle Reihe oder Spalte → aus ihren 8 Karten zählt die **beste Pokerhand aus 5 Karten**, dann wird sie abgeräumt.
+- Jedes Kästchen trägt eine Karte (2 bis Ass, alle Werte gleich wahrscheinlich). **Jedes Teil hat eine Farbe**
+  (♠ ♥ ♦ ♣) – so lassen sich Flushs planen.
+- Volle Reihe oder Spalte → aus ihren 8 Karten zählt die **beste Pokerhand aus 5 Karten**.
+- **Mindesthand:** Die Reihe verschwindet nur, wenn ihre Hand mindestens die Mindesthand erreicht. Sonst bleibt sie
+  **gesperrt** liegen, bis eine Reihe quer durch sie abgeräumt wird (dann entsteht eine Lücke und eine neue Chance).
+  Die Mindesthand steigt mit den abgeräumten Reihen: Paar (ab 0) → Zwei Paare (ab 10) → Drilling (ab 35).
+  Die Kurve ist per Simulation eingestellt: Wer Poker beachtet, macht rund 40–60 % mehr Punkte als jemand, der es ignoriert.
 - Punkte pro abgeräumter Reihe = 8 Kästchen × 10 × Faktor der Hand:
 
   | Hand | Faktor | | Hand | Faktor |

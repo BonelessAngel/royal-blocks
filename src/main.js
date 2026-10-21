@@ -1,6 +1,8 @@
 // Anzeige und Bedienung von Royal Blocks.
 
-import { SIZE, STREAK_GRACE, canPlace, createGame, fitsAnywhere, idx, placePiece, previewPlacement, streakMultiplier } from './game.js';
+import {
+  SIZE, STREAK_GRACE, canPlace, createGame, findFullLines, fitsAnywhere, idx, placePiece, previewPlacement, requirementFor, streakMultiplier,
+} from './game.js';
 import { HANDS, SUITS, rankLabel } from './poker.js';
 import { setSoundEnabled, setVibrationEnabled, sounds, unlockAudio, vibrate } from './audio.js';
 import { SUIT_COLORS, burst, chips, initFx } from './fx.js';
@@ -21,6 +23,9 @@ const els = {
   streak: $('streak'),
   preview: $('preview'),
   banner: $('banner'),
+  req: $('req'),
+  reqHand: $('req-hand'),
+  reqNext: $('req-next'),
 };
 
 // ---------- Zustand ----------
@@ -55,7 +60,7 @@ let gap = 3;
 
 function layout() {
   const w = Math.min(window.innerWidth, 560) - 24;
-  const h = window.innerHeight - 64 - 30 - 8 - 34; // Kopfzeile, Vorschau, Abstände
+  const h = window.innerHeight - 64 - 28 - 30 - 8 - 34; // Kopfzeile, Mindesthand, Vorschau, Abstände
   gap = window.innerWidth < 380 ? 2 : 3;
   const byWidth = (w - 2 - 9 * gap) / 8;
   const byHeight = (h - 2 - 9 * gap) / 11.4; // 8 Feld-Reihen + 3,4 für die Ablage
@@ -165,12 +170,26 @@ function renderScore() {
   requestAnimationFrame(step);
 }
 
+function renderReq() {
+  const { level, next } = requirementFor(state.lines);
+  els.reqHand.textContent = HANDS[level].name;
+  els.reqNext.textContent = next ? `noch ${next.lines - state.lines} ${next.lines - state.lines === 1 ? 'Reihe' : 'Reihen'} bis ${HANDS[next.level].name}` : '';
+}
+
+// Volle Reihen, die liegen bleiben mussten, sind gesperrt.
+function renderLocked() {
+  for (const el of cellEls) el.classList.remove('locked');
+  for (const line of findFullLines(state.board)) for (const i of line.cells) cellEls[i].classList.add('locked');
+}
+
 function renderAll() {
   layout();
   renderBoard();
+  renderLocked();
   renderTray();
   renderStreak();
   renderScore();
+  renderReq();
 }
 
 // ---------- Ziehen ----------
@@ -180,7 +199,7 @@ let ghost = { cells: [], marked: [] };
 
 function clearGhost() {
   for (const i of ghost.cells) cellEls[i].classList.remove('ghost', 'g0', 'g1', 'g2', 'g3');
-  for (const i of ghost.marked) cellEls[i].classList.remove('will-clear', 'hand-card');
+  for (const i of ghost.marked) cellEls[i].classList.remove('will-clear', 'will-block', 'hand-card');
   ghost = { cells: [], marked: [] };
   els.preview.replaceChildren();
 }
@@ -192,14 +211,14 @@ function showGhost(piece, x, y) {
     cellEls[i].classList.add('ghost', `g${piece.cards[k].s}`);
     ghost.cells.push(i);
   });
-  const lines = previewPlacement(state.board, piece, x, y) ?? [];
+  const lines = previewPlacement(state, piece, x, y) ?? [];
   for (const line of lines) {
-    for (const i of line.cells) cellEls[i].classList.add('will-clear');
-    for (const i of line.handCells) cellEls[i].classList.add('hand-card');
+    for (const i of line.cells) cellEls[i].classList.add(line.ok ? 'will-clear' : 'will-block');
+    if (line.ok) for (const i of line.handCells) cellEls[i].classList.add('hand-card');
     ghost.marked.push(...line.cells);
     const tag = document.createElement('span');
-    tag.className = `tag t${line.hand.level >= 4 ? 2 : line.hand.level >= 1 ? 1 : 0}`;
-    tag.textContent = `${line.hand.name} ×${line.hand.mult}`;
+    tag.className = line.ok ? `tag t${line.hand.level >= 4 ? 2 : 1}` : 'tag bad';
+    tag.textContent = line.ok ? `${line.hand.name} ×${line.hand.mult}` : `${line.hand.name} – zu schwach`;
     els.preview.append(tag);
   }
 }
@@ -285,10 +304,15 @@ function place(slot, x, y) {
   vibrate(8);
 
   // verschwindende Karten als Effekt-Kopien über das Feld legen, bevor das Feld neu gezeichnet wird
+  const required = requirementFor(state.lines - res.lines.length).level;
   if (res.lines.length) clearEffects(res);
   renderBoard(res.placed.filter((i) => !res.removed.has(i)));
+  renderLocked();
+  if (res.blocked.length) blockedEffects(res, required);
   renderTray(res.dealt);
   renderStreak();
+  renderReq();
+  if (res.levelUp) setTimeout(levelUpEffects, res.lines.length ? 1250 : 300);
 
   if (state.score > best) {
     if (best > 0 && bestAtStart === best) sounds.record();
@@ -330,7 +354,12 @@ function clearEffects(res) {
   if (level >= 4) setTimeout(() => chips(cx, cy, 8 + level * 3), 350);
   if (res.tableClear) setTimeout(() => chips(cx, cy, 40), 500);
 
-  showBanner(res, top.hand);
+  const tier = level >= 7 ? 3 : level >= 4 ? 2 : level >= 2 ? 1 : 0;
+  const extras = [];
+  if (res.lines.length > 1) extras.push(`Kombo ×${res.combo}`);
+  if (res.streak > 1) extras.push(`Serie ×${res.streakMult}`);
+  if (res.tableClear) extras.push('Tisch leer!');
+  showBanner({ title: top.hand.name, tier, extra: extras.join(' · '), points: `+${fmt(res.points)}` });
 
   sounds.clear(level, res.streak, res.combo);
   if (res.tableClear) setTimeout(() => sounds.tableClear(), 400);
@@ -345,30 +374,59 @@ function clearEffects(res) {
   }
 }
 
-function showBanner(res, hand) {
-  const tier = hand.level >= 7 ? 3 : hand.level >= 4 ? 2 : hand.level >= 2 ? 1 : 0;
+// Eine volle Reihe war zu schwach: sie bleibt gesperrt liegen.
+function blockedEffects(res, required) {
+  for (const line of res.blocked) {
+    for (const i of line.cells) {
+      const el = cellEls[i];
+      el.classList.remove('blocked-flash');
+      void el.offsetWidth;
+      el.classList.add('blocked-flash');
+      setTimeout(() => el.classList.remove('blocked-flash'), 700);
+    }
+  }
+  sounds.blocked();
+  vibrate([60, 40, 60]);
+  if (!res.lines.length) {
+    const weakest = res.blocked.reduce((a, b) => (b.hand.level < a.hand.level ? b : a));
+    showBanner({
+      title: 'Zu schwach',
+      tier: 'bad',
+      extra: `${weakest.hand.name} – nötig: ${HANDS[required].name}`,
+      points: 'Reihe gesperrt',
+    });
+  }
+}
+
+function levelUpEffects() {
+  const { level } = requirementFor(state.lines);
+  sounds.levelUp();
+  vibrate([30, 30, 30, 30, 60]);
+  showBanner({ title: 'Neue Mindesthand', tier: 'up', extra: HANDS[level].name, points: '' });
+  els.req.classList.remove('level-up');
+  void els.req.offsetWidth;
+  els.req.classList.add('level-up');
+}
+
+function showBanner({ title, tier, extra, points }) {
   const name = document.createElement('div');
   name.className = `hand-name tier${tier}`;
-  name.textContent = hand.name;
+  name.textContent = title;
   els.banner.replaceChildren(name);
-
-  const extras = [];
-  if (res.lines.length > 1) extras.push(`Kombo ×${res.combo}`);
-  if (res.streak > 1) extras.push(`Serie ×${res.streakMult}`);
-  if (res.tableClear) extras.push('Tisch leer!');
-  if (extras.length) {
+  if (extra) {
     const ex = document.createElement('div');
     ex.className = 'extra';
-    ex.textContent = extras.join(' · ').toUpperCase();
+    ex.textContent = extra.toUpperCase();
     els.banner.append(ex);
   }
-  const pts = document.createElement('div');
-  pts.className = 'points';
-  pts.textContent = `+${fmt(res.points)}`;
-  els.banner.append(pts);
-
+  if (points) {
+    const pts = document.createElement('div');
+    pts.className = 'points';
+    pts.textContent = points;
+    els.banner.append(pts);
+  }
   clearTimeout(showBanner.timer);
-  showBanner.timer = setTimeout(() => els.banner.replaceChildren(), tier === 3 ? 1900 : 1200);
+  showBanner.timer = setTimeout(() => els.banner.replaceChildren(), tier === 3 || tier === 'up' ? 1900 : 1200);
 }
 
 // ---------- Fenster ----------
@@ -394,9 +452,11 @@ function newGame() {
   closeOverlays();
   els.banner.replaceChildren();
   renderBoard();
+  renderLocked();
   renderTray(true);
   renderStreak();
   renderScore();
+  renderReq();
 }
 
 function gameOver() {

@@ -65,14 +65,16 @@ export function randomShape(rng) {
   return SHAPES[SHAPES.length - 1];
 }
 
-// Volles Deck 2..Ass, jede Karte gleich wahrscheinlich.
-export function randomCard(rng) {
-  return { r: 2 + Math.floor(rng() * 13), s: Math.floor(rng() * 4) };
+// Volles Deck 2..Ass, jeder Wert gleich wahrscheinlich.
+export function randomRank(rng) {
+  return 2 + Math.floor(rng() * 13);
 }
 
+// Ein Teil hat immer eine Farbe (wie ein Block bei Block Blast) – so sieht man Flushs kommen.
 export function randomPiece(rng) {
   const shape = randomShape(rng);
-  return { shape: shape.id, w: shape.w, h: shape.h, cells: shape.cells, cards: shape.cells.map(() => randomCard(rng)) };
+  const s = Math.floor(rng() * 4);
+  return { shape: shape.id, w: shape.w, h: shape.h, cells: shape.cells, cards: shape.cells.map(() => ({ r: randomRank(rng), s })) };
 }
 
 // Reproduzierbarer Zufall (für Tests und später für Tages-Challenges).
