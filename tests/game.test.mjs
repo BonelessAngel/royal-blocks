@@ -5,7 +5,7 @@ import {
   blastAt, foldTray, missionText, previewPlacement, recolorPiece, requirementFor,
 } from '../src/game.js';
 import { SHAPES, randomPiece, seededRng } from '../src/pieces.js';
-import { HELP, dealTray, lineHints, newMission as newMissionFor } from '../src/game.js';
+import { HELP, LOCK_MOVES, dealTray, lineHints, newMission as newMissionFor, useFreeContinue } from '../src/game.js';
 
 const card = (r, s) => ({ r, s });
 const single = (c = card(2, 0)) => ({ shape: 0, w: 1, h: 1, cells: [[0, 0]], cards: [c] });
@@ -350,4 +350,34 @@ test('hilfreiches Austeilen gibt öfter Teile, die eine Reihe abräumen', () => 
   const withHelp = count(1);
   HELP.chance = 0.6;
   assert.ok(withHelp > without, `${withHelp} mit Hilfe, ${without} ohne`);
+});
+
+test('gesperrte Reihe zerbröselt nach einigen Zügen', () => {
+  const game = emptyGame([single(card(13, 3)), single(), single()]);
+  game.locked = {};
+  weakRow.forEach((c, x) => (game.board[idx(x, 0)] = c));
+  placePiece(game, 0, 7, 0);
+  assert.equal(game.locked['row:0'], LOCK_MOVES);
+  let crumbled = null;
+  for (let k = 0; k < LOCK_MOVES; k++) {
+    game.tray = [single(), single(), single()];
+    const res = placePiece(game, 0, k, 4);
+    if (res.crumbled) crumbled = { res, k };
+  }
+  assert.ok(crumbled, 'Reihe ist zerbröselt');
+  assert.equal(crumbled.k, LOCK_MOVES - 1);
+  assert.equal(crumbled.res.crumbled.removed.size, 8);
+  assert.ok(Array.from({ length: 8 }, (_, x) => game.board[idx(x, 0)]).every((c) => c === null));
+  assert.deepEqual(game.locked, {});
+});
+
+test('einmal pro Runde gratis weiterspielen', () => {
+  const game = createGame(3);
+  assert.equal(useFreeContinue(game), true);
+  assert.equal(game.tray.filter(Boolean).length, 3);
+  assert.equal(useFreeContinue(game), false);
+});
+
+test('Mindesthand endet bei Zwei Paaren (Casual)', () => {
+  assert.equal(requirementFor(100000).level, 2);
 });

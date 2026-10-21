@@ -14,6 +14,7 @@ export const BUILD_FILES = [
   'audio.js',
   'fx.js',
   'storage.js',
+  'progress.js',
   'manifest.webmanifest',
   'sw.js',
   'icon-180.png',

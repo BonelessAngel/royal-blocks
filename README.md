@@ -10,7 +10,8 @@ Block-Puzzle mit Pokerhänden für [bens-games.de](https://bens-games.de) – wi
 - Volle Reihe oder Spalte → aus ihren 8 Karten zählt die **beste Pokerhand aus 5 Karten**.
 - **Mindesthand:** Die Reihe verschwindet nur, wenn ihre Hand mindestens die Mindesthand erreicht. Sonst bleibt sie
   **gesperrt** liegen, bis eine Reihe quer durch sie abgeräumt wird (dann entsteht eine Lücke und eine neue Chance).
-  Die Mindesthand steigt mit den abgeräumten Reihen: Paar (ab 0) → Zwei Paare (ab 10) → Drilling (ab 35).
+  Die Mindesthand steigt mit den abgeräumten Reihen: Paar (ab 0) → Zwei Paare (ab 10).
+  **Casual:** Gesperrte Reihen zerbröseln nach 5 Zügen von selbst (ohne Punkte), ein Zähler zeigt die verbleibenden Züge.
   Die Kurve ist per Simulation eingestellt: Wer Poker beachtet, macht rund 40–60 % mehr Punkte als jemand, der es ignoriert.
 - Punkte pro abgeräumter Reihe = 8 Kästchen × 10 × Faktor der Hand:
 
@@ -29,6 +30,9 @@ Block-Puzzle mit Pokerhänden für [bens-games.de](https://bens-games.de) – wi
 - **Hilfreiches Austeilen** (wie bei Block Blast): In 60 % der Fälle werden 5 Sätze Teile ausprobiert und der genommen,
   mit dem sich die meisten Reihen abräumen lassen. Neue Karten passen öfter zu fast vollen Reihen (Farbe 35 %, Wert 30 %).
   Laut Simulation: Runden etwa 50 % länger, mehr als doppelt so viele Punkte. Leere Felder in fast vollen Reihen leuchten.
+- **Belohnungen** (`src/progress.js`): Spieler-Level mit Erfahrung aus jeder Runde (Level-Aufstieg = Chips, jedes 5. Level
+  ein Design), Truhe am Rundenende (mehr Chips für bessere Runden, selten ×3), Tagesgeschenk mit Tagesserie (50–300 Chips),
+  Lob-Rufe beim Abräumen. Einmal pro Runde gratis weiterspielen.
 - **Joker ★:** etwa jedes 25. Teil hat ein Joker-Kästchen, das als die Karte zählt, die die beste Hand ergibt.
 - **Chips** (bleiben über alle Runden): pro abgeräumter Reihe so viele wie der Faktor der Hand, +25 bei „Tisch leer“,
   dazu Belohnungen für Aufträge. Eine Runde bringt laut Simulation etwa 500–650 Chips.
@@ -41,9 +45,11 @@ Block-Puzzle mit Pokerhänden für [bens-games.de](https://bens-games.de) – wi
 - **Gefühl:** Plopp-Kette (jedes Kästchen ein steigender Ton), Punkte fliegen zur Anzeige.
 - **Vibration:** Android über die Vibrations-Schnittstelle; iPhone (ab iOS 18) über einen versteckten Schalter,
   der ein kurzes haptisches Tippen auslöst – mehr erlaubt Safari Webseiten nicht.
+- **iPad:** hochkant größeres Feld und größere Schrift; quer Feld links, Punkte, Auftrag, Spezialzüge und Ablage rechts.
+  Die installierte App darf gedreht werden.
 - **Musik:** im Browser erzeugter Synthwave-Takt, wird mit der Serie voller; eigener Schalter im Menü.
-- **Designs** (mit Chips freischaltbar): Farbwelten Neon, Gold-Casino (800), Eis (1.500), Retro-Arcade (2.500);
-  Kachel-Stile Standard, Glas (600), Pixel (1.200), Chip (2.000).
+- **Designs** (mit Chips freischaltbar): Farbwelten Neon, Gold-Casino (1.500), Eis (3.000), Retro-Arcade (5.000);
+  Kachel-Stile Standard, Glas (1.000), Pixel (2.000), Chip (4.000).
 
 Alle Werte stehen in `src/game.js`, `src/poker.js`, `src/pieces.js` und (Designs) `src/main.js`.
 
@@ -87,7 +93,7 @@ Voraussetzung: [Node.js](https://nodejs.org) ab Version 20. Es gibt **keine** Ab
 Dateiliste des Builds (gleich wie `scripts/files.mjs`):
 
 ```
-index.html, style.css, main.js, game.js, poker.js, pieces.js, audio.js, fx.js, storage.js,
+index.html, style.css, main.js, game.js, poker.js, pieces.js, audio.js, fx.js, storage.js, progress.js,
 manifest.webmanifest, sw.js, icon-180.png, icon-192.png, icon-512.png
 ```
 
