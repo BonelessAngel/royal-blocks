@@ -45,6 +45,8 @@ Block-Puzzle mit Pokerhänden für [bens-games.de](https://bens-games.de) – wi
 - **Gefühl:** Plopp-Kette (jedes Kästchen ein steigender Ton), Punkte fliegen zur Anzeige.
 - **Vibration:** Android über die Vibrations-Schnittstelle; iPhone (ab iOS 18) über einen versteckten Schalter,
   der ein kurzes haptisches Tippen auslöst – mehr erlaubt Safari Webseiten nicht.
+- **iPad:** hochkant größeres Feld und größere Schrift; quer Feld links, Punkte, Auftrag, Spezialzüge und Ablage rechts.
+  Die installierte App darf gedreht werden.
 - **Musik:** im Browser erzeugter Synthwave-Takt, wird mit der Serie voller; eigener Schalter im Menü.
 - **Designs** (mit Chips freischaltbar): Farbwelten Neon, Gold-Casino (1.500), Eis (3.000), Retro-Arcade (5.000);
   Kachel-Stile Standard, Glas (1.000), Pixel (2.000), Chip (4.000).

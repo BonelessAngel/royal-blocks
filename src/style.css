@@ -432,7 +432,7 @@ button { font: inherit; color: inherit; }
 .piece {
   display: grid;
   gap: calc(var(--gap) * 0.7);
-  --size: calc(var(--cell) * 0.56);
+  --size: var(--piece, calc(var(--cell) * 0.56));
   grid-auto-rows: var(--size);
   grid-auto-columns: var(--size);
 }
@@ -919,3 +919,49 @@ button { font: inherit; color: inherit; }
 
 @keyframes chest-wiggle { from { transform: rotate(-2deg); } to { transform: rotate(2deg); } }
 @keyframes chest-glow { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(18); } }
+
+/* ---------- Tablet (iPad) ---------- */
+/* hochkant: alles etwas größer */
+.tablet #app { max-width: 780px; }
+.tablet .top { min-height: 74px; }
+.tablet .score { font-size: 56px; }
+.tablet .best #best { font-size: 22px; }
+.tablet .best .label, .tablet .lvl { font-size: 13px; }
+.tablet .lvl-bar { width: 70px; height: 6px; }
+.tablet .info .req, .tablet .mission { height: 29px; font-size: 14px; }
+.tablet .req-hand, .tablet .mission-text { font-size: 16px; }
+.tablet .preview { font-size: 16px; }
+.tablet .powers { height: 50px; }
+.tablet .power { height: 46px; font-size: 15px; border-radius: 14px; }
+.tablet .power .p-icon { display: inline; font-size: 18px; }
+.tablet .wallet { font-size: 18px; }
+.tablet .panel { width: min(460px, 100%); }
+.tablet .icon-btn { width: 52px; height: 52px; }
+
+/* quer: Feld links, alles andere in einer Spalte rechts */
+#app.wide {
+  max-width: none;
+  height: 100dvh;
+  display: grid;
+  grid-template-columns: auto var(--side);
+  grid-template-rows: auto auto auto auto 1fr;
+  grid-template-areas:
+    'board top'
+    'board info'
+    'board preview'
+    'board powers'
+    'board tray';
+  column-gap: 36px;
+  justify-content: center;
+  align-content: center;
+  align-items: center;
+  padding: calc(env(safe-area-inset-top) + 20px) 24px calc(env(safe-area-inset-bottom) + 20px);
+}
+#app.wide .top { grid-area: top; }
+#app.wide .info { grid-area: info; }
+#app.wide .preview { grid-area: preview; flex-wrap: wrap; height: auto; min-height: 30px; }
+#app.wide .powers { grid-area: powers; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: auto auto; height: auto; }
+#app.wide .powers .wallet { grid-column: 1 / -1; justify-content: center; margin-bottom: 4px; }
+#app.wide .tray { grid-area: tray; height: 100%; min-height: 160px; align-self: stretch; grid-template-columns: 1fr; grid-template-rows: repeat(3, 1fr); margin-top: 4px; }
+#app.wide .board-wrap { grid-area: board; height: 100%; }
+#app.wide .info .req, #app.wide .mission { flex-wrap: wrap; justify-content: center; height: auto; min-height: 29px; }

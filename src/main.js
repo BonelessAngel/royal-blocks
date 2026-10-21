@@ -19,6 +19,7 @@ const version = root.dataset.version;
 const els = {
   app: $('app'),
   board: $('board'),
+  tray: $('tray'),
   slots: [...document.querySelectorAll('.slot')],
   drag: $('drag'),
   score: $('score'),
@@ -142,16 +143,37 @@ function spendChips(n) {
 let cell = 40;
 let gap = 3;
 
+// Handy und Tablet hochkant: alles untereinander. Breite Bildschirme quer (z. B. iPad): Feld links, Rest rechts.
 function layout() {
-  const w = Math.min(window.innerWidth, 560) - 24;
-  // Kopfzeile, Mindesthand + Auftrag, Vorschau, Spezialzüge, Abstände
-  const h = window.innerHeight - 60 - 50 - 26 - 42 - 8 - 30;
-  gap = window.innerWidth < 380 ? 2 : 3;
-  const byWidth = (w - 2 - 9 * gap) / 8;
-  const byHeight = (h - 2 - 9 * gap) / 11.2; // 8 Feld-Reihen + Ablage
-  cell = Math.max(22, Math.floor(Math.min(byWidth, byHeight, 60)));
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  const wide = W >= 900 && W > H * 1.15;
+  const tablet = W >= 700;
+  els.app.classList.toggle('wide', wide);
+  root.classList.toggle('tablet', tablet);
+  gap = W < 380 ? 2 : tablet ? 4 : 3;
+  let pieceSize;
+  if (wide) {
+    const side = Math.round(Math.min(440, Math.max(340, W * 0.32)));
+    const byHeight = (H - 48 - 2 - 9 * gap) / 8;
+    const byWidth = (W - side - 80 - 2 - 9 * gap) / 8;
+    cell = Math.max(28, Math.floor(Math.min(byHeight, byWidth, 100)));
+    root.style.setProperty('--side', `${side}px`);
+    // Teile stehen rechts untereinander: jedes Teil (bis 5 Kästchen) muss in ein Drittel der Ablage passen
+    const trayHeight = els.tray.getBoundingClientRect().height || H / 2;
+    pieceSize = Math.floor(Math.min(cell * 0.6, (side - 24) / 5.3, (trayHeight / 3 - 10) / 5.3));
+  } else {
+    const w = Math.min(W, tablet ? 780 : 560) - 24;
+    // Kopfzeile, Mindesthand + Auftrag, Vorschau, Spezialzüge, Abstände
+    const h = H - (tablet ? 74 : 60) - (tablet ? 58 : 50) - 26 - (tablet ? 50 : 42) - 8 - 30;
+    const byWidth = (w - 2 - 9 * gap) / 8;
+    const byHeight = (h - 2 - 9 * gap) / 11.2; // 8 Feld-Reihen + Ablage
+    cell = Math.max(22, Math.floor(Math.min(byWidth, byHeight, tablet ? 92 : 60)));
+    pieceSize = Math.floor(cell * 0.56);
+  }
   root.style.setProperty('--cell', `${cell}px`);
   root.style.setProperty('--gap', `${gap}px`);
+  root.style.setProperty('--piece', `${pieceSize}px`);
 }
 
 // ---------- Darstellung ----------
@@ -418,7 +440,7 @@ function endDrag(e) {
   const pw = d.piece.w * cell;
   const ph = d.piece.h * cell;
   els.drag.classList.add('back');
-  els.drag.style.transform = `translate(${r.left + r.width / 2 - pw / 2}px, ${r.top + r.height / 2 - ph / 2}px) scale(0.56)`;
+  els.drag.style.transform = `translate(${r.left + r.width / 2 - pw / 2}px, ${r.top + r.height / 2 - ph / 2}px) scale(${(parseFloat(root.style.getPropertyValue('--piece')) || cell * 0.56) / cell})`;
   setTimeout(() => {
     els.drag.className = 'drag';
     els.slots[d.slot].classList.remove('dragging');
