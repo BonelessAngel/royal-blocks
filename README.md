@@ -33,6 +33,12 @@ Block-Puzzle mit Pokerhänden für [bens-games.de](https://bens-games.de) – wi
 - **Belohnungen** (`src/progress.js`): Spieler-Level mit Erfahrung aus jeder Runde (Level-Aufstieg = Chips, jedes 5. Level
   ein Design), Truhe am Rundenende (mehr Chips für bessere Runden, selten ×3), Tagesgeschenk mit Tagesserie (50–300 Chips),
   Lob-Rufe beim Abräumen. Einmal pro Runde gratis weiterspielen.
+- **Goldene Karte** (etwa jedes 10. Teil): doppelte Punkte für ihre Reihe, +15 Chips, Gold-Regen.
+- **Fieber:** bei Serie 5, 10, 15 … zählen 6 Züge lang Punkte und Chips doppelt; Feld glüht, Musik auf voller Stärke.
+- **Jackpot:** startet bei 500 Chips, wächst pro beendeter Runde um 40. Royal Flush gewinnt alles, Straight Flush ein Viertel.
+- **Startbildschirm** mit Level, Chips, Jackpot, Rekord, Spielen/Tages-Challenge, Designs, Statistik, Regeln.
+- **Rubbellos** jede 3. beendete Runde (40–750 Chips), **Statistik-Seite**, **Teilen** über das Teilen-Menü des Geräts
+  (ohne Server; sonst Text in die Zwischenablage).
 - **Joker ★:** etwa jedes 25. Teil hat ein Joker-Kästchen, das als die Karte zählt, die die beste Hand ergibt.
 - **Chips** (bleiben über alle Runden): pro abgeräumter Reihe so viele wie der Faktor der Hand, +25 bei „Tisch leer“,
   dazu Belohnungen für Aufträge. Eine Runde bringt laut Simulation etwa 500–650 Chips.
@@ -93,7 +99,7 @@ Voraussetzung: [Node.js](https://nodejs.org) ab Version 20. Es gibt **keine** Ab
 Dateiliste des Builds (gleich wie `scripts/files.mjs`):
 
 ```
-index.html, style.css, main.js, game.js, poker.js, pieces.js, audio.js, fx.js, storage.js, progress.js,
+index.html, style.css, main.js, game.js, poker.js, pieces.js, audio.js, fx.js, storage.js, progress.js, scratch.js,
 manifest.webmanifest, sw.js, icon-180.png, icon-192.png, icon-512.png
 ```
 

@@ -71,6 +71,7 @@ export function randomRank(rng) {
 }
 
 export const JOKER_CHANCE = 1 / 25; // so viele Teile haben ein Joker-Kästchen
+export const GOLD_CHANCE = 1 / 10; // so viele Teile haben eine goldene Karte (doppelte Belohnung)
 
 // Ein Teil hat immer eine Farbe (wie ein Block bei Block Blast) – so sieht man Flushs kommen.
 // Selten ist ein Kästchen ein Joker ({ j: 1 }), der als beliebige Karte zählt.
@@ -87,6 +88,7 @@ export function randomPiece(rng, hints = null) {
     s,
   }));
   if (rng() < JOKER_CHANCE) cards[Math.floor(rng() * cards.length)] = { j: 1 };
+  else if (rng() < GOLD_CHANCE) cards[Math.floor(rng() * cards.length)].g = 1;
   return { shape: shape.id, w: shape.w, h: shape.h, s, cells: shape.cells, cards };
 }
 

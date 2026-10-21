@@ -5,7 +5,7 @@ import {
   blastAt, foldTray, missionText, previewPlacement, recolorPiece, requirementFor,
 } from '../src/game.js';
 import { SHAPES, randomPiece, seededRng } from '../src/pieces.js';
-import { HELP, LOCK_MOVES, dealTray, lineHints, newMission as newMissionFor, useFreeContinue } from '../src/game.js';
+import { FEVER_MOVES, FEVER_STREAK, GOLD_CHIPS, HELP, LOCK_MOVES, dealTray, lineHints, newMission as newMissionFor, useFreeContinue } from '../src/game.js';
 
 const card = (r, s) => ({ r, s });
 const single = (c = card(2, 0)) => ({ shape: 0, w: 1, h: 1, cells: [[0, 0]], cards: [c] });
@@ -380,4 +380,47 @@ test('einmal pro Runde gratis weiterspielen', () => {
 
 test('Mindesthand endet bei Zwei Paaren (Casual)', () => {
   assert.equal(requirementFor(100000).level, 2);
+});
+
+const pairRow = (game) => {
+  [card(14, 0), card(14, 1), card(5, 2), card(7, 3), card(9, 0), card(11, 1), card(3, 2)].forEach((c, x) => (game.board[idx(x, 0)] = c));
+  game.board[idx(0, 5)] = card(9, 0);
+};
+
+test('goldene Karte verdoppelt die Punkte der Reihe und bringt Chips', () => {
+  const plain = emptyGame([single(card(2, 3)), single(), single()]);
+  pairRow(plain);
+  const a = placePiece(plain, 0, 7, 0);
+  const gold = emptyGame([single({ r: 2, s: 3, g: 1 }), single(), single()]);
+  pairRow(gold);
+  const b = placePiece(gold, 0, 7, 0);
+  assert.equal(b.golden, 1);
+  assert.equal(b.points - 1, (a.points - 1) * 2);
+  assert.equal(b.chips, a.chips + GOLD_CHIPS);
+});
+
+test('Fieber startet bei Serie 5 und verdoppelt einige Züge lang', () => {
+  const game = emptyGame([single(card(2, 3)), single(), single()]);
+  game.streak = FEVER_STREAK - 1;
+  game.grace = STREAK_GRACE;
+  pairRow(game);
+  const res = placePiece(game, 0, 7, 0);
+  assert.equal(res.feverStart, true);
+  assert.equal(res.feverMult, 2);
+  assert.equal(game.fever, FEVER_MOVES);
+  let ended = false;
+  for (let k = 0; k < FEVER_MOVES; k++) {
+    game.tray = [single(), single(), single()];
+    const r = placePiece(game, 0, k, 3);
+    assert.equal(r.feverMult, 2);
+    if (r.feverEnd) ended = true;
+  }
+  assert.equal(game.fever, 0);
+  assert.ok(ended);
+});
+
+test('Farbe tauschen behält die goldene Karte', () => {
+  const game = emptyGame([{ shape: 1, w: 2, h: 1, s: 0, cells: [[0, 0], [1, 0]], cards: [{ r: 5, s: 0, g: 1 }, { r: 6, s: 0 }] }, null, null]);
+  recolorPiece(game, 0, 2);
+  assert.deepEqual(game.tray[0].cards[0], { r: 5, s: 2, g: 1 });
 });

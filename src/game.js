@@ -9,6 +9,9 @@ export const CELL_POINTS = 10; // Punkte pro Kästchen einer abgeräumten Reihe,
 export const STREAK_GRACE = 3; // so viele Züge ohne Abräumen beendet die Serie
 export const TABLE_CLEAR_BONUS = 2000; // Feld komplett leer
 export const TABLE_CLEAR_CHIPS = 25;
+export const GOLD_CHIPS = 15; // Extra-Chips pro goldener Karte
+export const FEVER_STREAK = 5; // Fieber bei Serie 5, 10, 15 …
+export const FEVER_MOVES = 6; // so viele Züge zählt alles doppelt
 const DEAL_ATTEMPTS = 25;
 
 // Mindesthand: Eine volle Reihe verschwindet nur, wenn ihre Pokerhand mindestens so stark ist.
@@ -54,6 +57,7 @@ export function createGame(seed, mode = 'free', day = null) {
     locked: {}, // gesperrte Reihen: "row:3" -> verbleibende Züge
     freeContinue: true, // einmal pro Runde gratis weiterspielen
     rewarded: false, // Truhe am Rundenende schon geöffnet
+    fever: 0, // verbleibende Fieber-Züge
     over: false,
   };
   state.tray = dealTray(state.board, rngOf(state));
@@ -258,10 +262,14 @@ export function placePiece(state, slot, x, y) {
 
   let linePoints = 0;
   let chips = 0;
+  let golden = 0;
   for (const line of lines) {
-    line.points = CELL_POINTS * SIZE * line.hand.mult;
+    // Goldene Karte in der Reihe: doppelte Punkte und Extra-Chips
+    line.golden = line.cells.filter((i) => removed.get(i)?.g).length;
+    line.points = CELL_POINTS * SIZE * line.hand.mult * (line.golden ? 2 : 1);
     linePoints += line.points;
-    chips += line.hand.mult;
+    chips += line.hand.mult + line.golden * GOLD_CHIPS;
+    golden += line.golden;
     state.bestHand = Math.max(state.bestHand, line.hand.level);
   }
 
@@ -274,13 +282,24 @@ export function placePiece(state, slot, x, y) {
     if (state.grace <= 0) state.streak = 0;
   }
 
+  // Fieber: Bei jeder 5. Serie zählt für einige Züge alles doppelt (auch der auslösende Zug)
+  const feverBefore = (state.fever ?? 0) > 0;
+  if (feverBefore) state.fever--;
+  const feverStart = lines.length > 0 && state.streak % FEVER_STREAK === 0;
+  if (feverStart) state.fever = FEVER_MOVES;
+  const feverMult = feverBefore || feverStart ? 2 : 1;
+  const feverEnd = feverBefore && !feverStart && state.fever === 0;
+
   const combo = lines.length;
   const streakMult = lines.length ? streakMultiplier(state.streak) : 1;
   const tableClear = lines.length > 0 && state.board.every((c) => c === null);
   const points =
-    placed.length + Math.round(linePoints * combo * streakMult) + (tableClear ? Math.round(TABLE_CLEAR_BONUS * streakMult) : 0);
+    placed.length +
+    Math.round(linePoints * combo * streakMult * feverMult) +
+    (tableClear ? Math.round(TABLE_CLEAR_BONUS * streakMult) : 0);
   state.score += points;
   if (tableClear) chips += TABLE_CLEAR_CHIPS;
+  chips *= feverMult;
 
   let mission = null;
   if (missionDone(state, lines)) {
@@ -307,7 +326,7 @@ export function placePiece(state, slot, x, y) {
 
   return {
     placed, lines, blocked, removed, combo, streak: state.streak, streakMult, tableClear, points, chips,
-    mission, near, levelUp, crumbled, dealt, over: state.over,
+    mission, near, levelUp, crumbled, golden, feverStart, feverEnd, feverMult, dealt, over: state.over,
   };
 }
 
@@ -369,7 +388,7 @@ export function recolorPiece(state, slot, suit) {
   const piece = state.tray[slot];
   if (!piece || piece.s === suit) return false;
   piece.s = suit;
-  piece.cards = piece.cards.map((c) => (c.j ? c : { r: c.r, s: suit }));
+  piece.cards = piece.cards.map((c) => (c.j ? c : { ...c, s: suit }));
   updateOver(state);
   return true;
 }
