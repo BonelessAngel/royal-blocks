@@ -54,10 +54,9 @@ function parse(rows) {
 }
 
 export const SHAPES = SHAPE_DEFS.map((def, id) => ({ id, weight: def.weight, ...parse(def.rows) }));
-const TOTAL_WEIGHT = SHAPES.reduce((sum, s) => sum + s.weight, 0);
 
 export function randomShape(rng) {
-  let pick = rng() * TOTAL_WEIGHT;
+  let pick = rng() * SHAPES.reduce((sum, s) => sum + s.weight, 0);
   for (const shape of SHAPES) {
     pick -= shape.weight;
     if (pick < 0) return shape;
@@ -80,8 +79,9 @@ export const GOLD_CHANCE = 1 / 10; // so viele Teile haben eine goldene Karte (d
 export const HINTS = { suit: 0.35, rank: 0.3 };
 const pick = (rng, list) => list[Math.floor(rng() * list.length)];
 
-export function randomPiece(rng, hints = null) {
-  const shape = randomShape(rng);
+// fixedShape (optional): diese Form statt einer zufälligen (für das Kombo-Teil)
+export function randomPiece(rng, hints = null, fixedShape = null) {
+  const shape = fixedShape ?? randomShape(rng);
   const s = hints?.suits.length && rng() < HINTS.suit ? pick(rng, hints.suits) : Math.floor(rng() * 4);
   const cards = shape.cells.map(() => ({
     r: hints?.ranks.length && rng() < HINTS.rank ? pick(rng, hints.ranks) : randomRank(rng),

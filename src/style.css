@@ -1080,3 +1080,15 @@ button { font: inherit; color: inherit; }
 .mission.done { animation: mission-pop 0.9s cubic-bezier(0.2, 1.4, 0.4, 1); }
 @keyframes mission-pop { 40% { transform: scale(1.08); filter: brightness(1.6); } }
 @media (max-width: 380px) { .score { font-size: 36px; } }
+
+/* Mega-Kombo: kurzer Blitz über den ganzen Bildschirm */
+.flash {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.95), rgba(255, 211, 77, 0.55) 40%, transparent 75%);
+  animation: flash 0.6s ease-out forwards;
+}
+@keyframes flash { from { opacity: 1; } to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .flash { display: none; } }

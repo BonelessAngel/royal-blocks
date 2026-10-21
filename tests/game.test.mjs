@@ -5,7 +5,7 @@ import {
   blastAt, foldTray, missionText, previewPlacement, recolorPiece, requirementFor,
 } from '../src/game.js';
 import { SHAPES, randomPiece, seededRng } from '../src/pieces.js';
-import { FEVER_MOVES, FEVER_STREAK, GOLD_CHIPS, HELP, LOCK_MOVES, dealTray, lineHints, newMission as newMissionFor, useFreeContinue } from '../src/game.js';
+import { FEVER_MOVES, FEVER_STREAK, GOLD_CHIPS, HELP, LOCK_MOVES, comboShape, dealTray, lineHints, newMission as newMissionFor, useFreeContinue } from '../src/game.js';
 
 const card = (r, s) => ({ r, s });
 const single = (c = card(2, 0)) => ({ shape: 0, w: 1, h: 1, cells: [[0, 0]], cards: [c] });
@@ -346,9 +346,10 @@ test('hilfreiches Austeilen gibt öfter Teile, die eine Reihe abräumen', () => 
     for (let s = 1; s <= 150; s++) if (canClear(dealTray(board, seededRng(s), 1))) hits++;
     return hits;
   };
+  const original = HELP.chance;
   const without = count(0);
   const withHelp = count(1);
-  HELP.chance = 0.6;
+  HELP.chance = original;
   assert.ok(withHelp > without, `${withHelp} mit Hilfe, ${without} ohne`);
 });
 
@@ -423,4 +424,35 @@ test('Farbe tauschen behält die goldene Karte', () => {
   const game = emptyGame([{ shape: 1, w: 2, h: 1, s: 0, cells: [[0, 0], [1, 0]], cards: [{ r: 5, s: 0, g: 1 }, { r: 6, s: 0 }] }, null, null]);
   recolorPiece(game, 0, 2);
   assert.deepEqual(game.tray[0].cards[0], { r: 5, s: 2, g: 1 });
+});
+
+test('Kombo-Regel: eine starke Reihe nimmt die schwache mit', () => {
+  const game = emptyGame([{ shape: 2, w: 1, h: 2, s: 3, cells: [[0, 0], [0, 1]], cards: [card(2, 3), card(13, 3)] }, null, null]);
+  pairRow(game); // Reihe 0: Paar Asse + 2♣ → Paar
+  weakRow.forEach((c, x) => (game.board[idx(x, 1)] = c)); // Reihe 1: mit K♣ nur hohe Karte
+  const preview = previewPlacement(game, game.tray[0], 7, 0);
+  assert.equal(preview.length, 2);
+  assert.ok(preview.every((l) => l.ok), 'Vorschau zeigt beide als abräumbar');
+  const res = placePiece(game, 0, 7, 0);
+  assert.equal(res.lines.length, 2);
+  assert.equal(res.blocked.length, 0);
+  assert.equal(res.combo, 2);
+});
+
+test('Kombo-Teil: findet die Form, die drei Reihen auf einmal schließt', () => {
+  const board = new Array(64).fill(null);
+  for (let y = 5; y < 8; y++) for (let x = 0; x < 7; x++) board[idx(x, y)] = card(2 + x, 0);
+  const found = comboShape(board);
+  assert.ok(found);
+  assert.equal(found.lines, 3);
+  assert.equal(found.shape.w, 1);
+  assert.equal(found.shape.h, 3);
+});
+
+test('Austeilen legt oft ein Kombo-Teil bei, wenn eins möglich ist', () => {
+  const board = new Array(64).fill(null);
+  for (let y = 5; y < 8; y++) for (let x = 0; x < 7; x++) board[idx(x, y)] = card(2 + x, y % 4);
+  let hits = 0;
+  for (let s = 1; s <= 100; s++) if (dealTray(board, seededRng(s), 1).some((p) => p.w === 1 && p.h === 3)) hits++;
+  assert.ok(hits >= 80, `${hits} von 100`);
 });

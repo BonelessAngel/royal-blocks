@@ -27,9 +27,13 @@ Block-Puzzle mit Pokerhänden für [bens-games.de](https://bens-games.de) – wi
 - **Serie:** Abräumen in aufeinanderfolgenden Zügen → ×1,5 / ×2 / ×2,5 …; die Serie hält 2 Züge ohne Abräumen aus.
 - **Tisch leer:** Feld komplett leer → +2000 (× Serie).
 - +1 Punkt pro gesetztem Kästchen. Spielende, wenn keins der übrigen Teile mehr passt.
-- **Hilfreiches Austeilen** (wie bei Block Blast): In 60 % der Fälle werden 5 Sätze Teile ausprobiert und der genommen,
-  mit dem sich die meisten Reihen abräumen lassen. Neue Karten passen öfter zu fast vollen Reihen (Farbe 35 %, Wert 30 %).
-  Laut Simulation: Runden etwa 50 % länger, mehr als doppelt so viele Punkte. Leere Felder in fast vollen Reihen leuchten.
+- **Hilfreiches Austeilen** (wie bei Block Blast): **Kombo-Teil** – in 90 % der Fälle, in denen eine Form mehrere Reihen
+  auf einmal schließen kann, liegt genau diese Form in der Ablage. Zusätzlich in 30 % der Fälle der Satz mit den meisten
+  Abräum-Möglichkeiten (Kombos zählen quadratisch). Neue Karten passen öfter zu fast vollen Reihen (Farbe 35 %, Wert 30 %).
+  Laut Simulation: Doppel-Abräumer etwa alle 17 Züge, 3+ Reihen etwa alle 180 Züge (vorher 44 bzw. ~1.450).
+  Leere Felder in fast vollen Reihen leuchten.
+- **Kombo-Regel:** Schafft bei mehreren neuen Reihen mindestens eine die Mindesthand, verschwinden alle.
+  Ab 3 Reihen: „MEGA-KOMBO“ mit Blitz, Chips-Regen und eigenem Ton.
 - **Belohnungen** (`src/progress.js`): Spieler-Level mit Erfahrung aus jeder Runde (Level-Aufstieg = Chips, jedes 5. Level
   ein Design), Truhe am Rundenende (mehr Chips für bessere Runden, selten ×3), Tagesgeschenk mit Tagesserie (50–300 Chips),
   Lob-Rufe beim Abräumen. Einmal pro Runde gratis weiterspielen.

@@ -630,11 +630,14 @@ function clearEffects(res) {
   if (res.tableClear) extras.push('Tisch leer!');
   if (res.near) extras.push(`Fast ein ${res.near.name}!`);
   bannerAt = 0;
+  // Kombos groß feiern: 2 Reihen "Doppel!", ab 3 "MEGA-KOMBO" mit Blitz über den ganzen Bildschirm
+  const mega = res.combo >= 3;
+  if (mega) megaComboEffects(res);
   queueBanner(() =>
     showBanner({
-      praise: praiseFor(level, res.combo),
-      title: top.hand.name,
-      tier,
+      praise: mega ? `Mega-Kombo ×${res.combo}!` : res.combo === 2 ? 'Doppel!' : praiseFor(level, res.combo),
+      title: mega ? res.lines.map((l) => l.hand.name).join(' + ') : top.hand.name,
+      tier: mega ? 3 : res.combo === 2 ? Math.max(tier, 2) : tier,
       extra: extras.join(' · '),
       points: `+${fmt(res.points)}  ·  +${res.chips} Chips`,
     }),
@@ -678,6 +681,20 @@ function blockedEffects(res, required) {
         points: 'Reihe gesperrt',
       }),
     );
+  }
+}
+
+// Drei oder mehr Reihen auf einmal: Blitz, Chips-Regen, großes Beben
+function megaComboEffects(res) {
+  const flash = document.createElement('div');
+  flash.className = 'flash';
+  document.body.append(flash);
+  setTimeout(() => flash.remove(), 700);
+  sounds.mega(res.combo);
+  vibrate([40, 30, 60, 30, 90]);
+  const box = els.board.getBoundingClientRect();
+  for (let k = 0; k < res.combo; k++) {
+    setTimeout(() => chipBurst(box.left + box.width * (0.25 + 0.25 * (k % 3)), box.top + box.height / 2, 18), 200 + k * 150);
   }
 }
 
