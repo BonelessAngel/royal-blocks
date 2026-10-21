@@ -26,8 +26,20 @@ Block-Puzzle mit Pokerhänden für [bens-games.de](https://bens-games.de) – wi
 - **Serie:** Abräumen in aufeinanderfolgenden Zügen → ×1,5 / ×2 / ×2,5 …; die Serie hält 2 Züge ohne Abräumen aus.
 - **Tisch leer:** Feld komplett leer → +2000 (× Serie).
 - +1 Punkt pro gesetztem Kästchen. Spielende, wenn keins der übrigen Teile mehr passt.
+- **Joker ★:** etwa jedes 25. Teil hat ein Joker-Kästchen, das als die Karte zählt, die die beste Hand ergibt.
+- **Chips** (bleiben über alle Runden): pro abgeräumter Reihe so viele wie der Faktor der Hand, +25 bei „Tisch leer“,
+  dazu Belohnungen für Aufträge. Eine Runde bringt laut Simulation etwa 250–350 Chips.
+- **Spezialzüge:** Passen (60, drei neue Teile), Farbe tauschen (40), Sprengen (120, gesperrte Reihe entfernen).
+  Am Spielende kann man sich mit Passen oder Sprengen retten.
+- **Aufträge:** immer ein Ziel sichtbar (Hand ab X, Flush in Farbe, Kombo, Serie); geschafft → Chips und neues, schwereres Ziel.
+- **„Fast!“:** fehlte genau eine Karte zu Straße, Flush oder Royal Flush, wird das angezeigt.
+- **Tages-Challenge:** gleicher Startwert für alle an einem Tag (aus dem Datum), beliebig oft spielbar, eigener Tagesrekord.
+  Der Zufall liegt im Spielstand, deshalb bleibt die Folge auch nach Neuladen gleich.
+- **Musik:** im Browser erzeugter Synthwave-Takt, wird mit der Serie voller; eigener Schalter im Menü.
+- **Designs** (mit Chips freischaltbar): Farbwelten Neon, Gold-Casino (800), Eis (1.500), Retro-Arcade (2.500);
+  Kachel-Stile Standard, Glas (600), Pixel (1.200), Chip (2.000).
 
-Alle Werte stehen in `src/game.js` und `src/poker.js`.
+Alle Werte stehen in `src/game.js`, `src/poker.js`, `src/pieces.js` und (Designs) `src/main.js`.
 
 ## Befehle
 
@@ -50,7 +62,7 @@ Voraussetzung: [Node.js](https://nodejs.org) ab Version 20. Es gibt **keine** Ab
 | `src/game.js` | Spielregeln ohne Anzeige: Setzen, Abräumen, Punkte, Spielende |
 | `src/main.js` | Anzeige, Ziehen, Effekte, Menü |
 | `src/fx.js`, `src/audio.js` | Partikel, Töne (im Browser erzeugt), Vibration |
-| `src/storage.js` | Rekord, Einstellungen und laufende Runde im Browser (`localStorage`, Präfix `royal-blocks:`) |
+| `src/storage.js` | Rekorde, Chips, Designs, Einstellungen und laufende Runden im Browser (`localStorage`, Präfix `royal-blocks:`) |
 | `src/sw.js` | Service Worker (Vorlage, der Build setzt Cache-Name und Dateiliste ein) |
 | `scripts/files.mjs` | **Spiel-ID, Build-Ordner und genaue Dateiliste** |
 

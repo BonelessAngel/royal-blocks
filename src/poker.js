@@ -19,7 +19,7 @@ export const HANDS = [
   { id: 'quads', name: 'Vierling', mult: 12 },
   { id: 'straight-flush', name: 'Straight Flush', mult: 20 },
   { id: 'royal-flush', name: 'Royal Flush', mult: 50 },
-];
+].map((hand, level) => ({ ...hand, level }));
 
 const result = (level, used) => ({ level, ...HANDS[level], used });
 
@@ -40,7 +40,62 @@ function findStraight(cards, indices) {
   return null;
 }
 
+const DECK = Array.from({ length: 52 }, (_, k) => ({ r: 2 + (k % 13), s: Math.floor(k / 13) }));
+const MAX_WILD = 3; // mehr Joker in einer Reihe kommen praktisch nie vor; weitere zählen als Pik-2
+
+// Beste Hand; Joker ({ j: 1 }) werden durch die Karte ersetzt, die die stärkste Hand ergibt.
+// used enthält die Positionen der Karten, die die Hand bilden (Joker eingeschlossen).
 export function evaluateHand(cards) {
+  const jokers = [];
+  cards.forEach((c, i) => c.j && jokers.push(i));
+  if (!jokers.length) return evaluatePlain(cards);
+
+  const work = cards.slice();
+  for (const i of jokers.slice(MAX_WILD)) work[i] = DECK[0];
+  const wild = jokers.slice(0, MAX_WILD);
+  let best = null;
+  const tryAll = (k) => {
+    if (best?.level === 9) return;
+    if (k === wild.length) {
+      const r = evaluatePlain(work);
+      if (!best || r.level > best.level) best = r;
+      return;
+    }
+    for (const card of DECK) {
+      work[wild[k]] = card;
+      tryAll(k + 1);
+    }
+  };
+  tryAll(0);
+  return best;
+}
+
+// "Fast!": Hat genau eine Karte zu einer stärkeren Hand (ab Straße) gefehlt? Gibt die Hand zurück oder null.
+export function nearMiss(cards, level) {
+  const plain = cards.filter((c) => !c.j);
+  const bySuit = [0, 1, 2, 3].map((s) => plain.filter((c) => c.s === s));
+  if (level < 9 && bySuit.some((list) => new Set(list.filter((c) => c.r >= 10).map((c) => c.r)).size === 4)) return HANDS[9];
+  if (level < 5 && bySuit.some((list) => list.length === 4)) return HANDS[5];
+  if (level < 4) {
+    const ranks = new Set(plain.map((c) => c.r));
+    if (ranks.has(14)) ranks.add(1);
+    for (let low = 1; low <= 10; low++) {
+      let count = 0;
+      for (let r = low; r < low + 5; r++) if (ranks.has(r)) count++;
+      if (count === 4) return HANDS[4];
+    }
+  }
+  return null;
+}
+
+// Farbe eines Flushs (für Aufträge wie "Flush in Herz"); null, wenn die Hand kein Flush ist.
+export function flushSuit(cards, hand) {
+  if (![5, 8, 9].includes(hand.level)) return null;
+  const real = hand.used.map((i) => cards[i]).find((c) => !c.j);
+  return real ? real.s : null;
+}
+
+function evaluatePlain(cards) {
   const all = cards.map((_, i) => i);
   const byHigh = (a, b) => cards[b].r - cards[a].r;
 

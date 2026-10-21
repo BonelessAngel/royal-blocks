@@ -1,7 +1,8 @@
 // Partikel (Funken und Chips) auf einer Leinwand über dem ganzen Bildschirm.
 
-export const SUIT_COLORS = ['#3ee8ff', '#ff3d8b', '#ffb52e', '#4dff88'];
-const GOLD = '#ffd34d';
+// Farben kommen aus dem aktiven Design (CSS-Variablen --s0..--s3 und --gold).
+const cssColor = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#ffffff';
+export const suitColor = (s) => (s >= 0 && s <= 3 ? cssColor('--s' + s) : cssColor('--gold'));
 
 let canvas;
 let ctx;
@@ -55,7 +56,7 @@ export function chips(x, y, count) {
       life: 1,
       decay: 0.008 + Math.random() * 0.006,
       size: 7 + Math.random() * 5,
-      color: [GOLD, ...SUIT_COLORS][Math.floor(Math.random() * 5)],
+      color: suitColor(Math.floor(Math.random() * 5) - 1),
       spin: Math.random() * Math.PI,
       kind: 'chip',
     });

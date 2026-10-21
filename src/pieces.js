@@ -70,21 +70,27 @@ export function randomRank(rng) {
   return 2 + Math.floor(rng() * 13);
 }
 
+export const JOKER_CHANCE = 1 / 25; // so viele Teile haben ein Joker-Kästchen
+
 // Ein Teil hat immer eine Farbe (wie ein Block bei Block Blast) – so sieht man Flushs kommen.
+// Selten ist ein Kästchen ein Joker ({ j: 1 }), der als beliebige Karte zählt.
 export function randomPiece(rng) {
   const shape = randomShape(rng);
   const s = Math.floor(rng() * 4);
-  return { shape: shape.id, w: shape.w, h: shape.h, cells: shape.cells, cards: shape.cells.map(() => ({ r: randomRank(rng), s })) };
+  const cards = shape.cells.map(() => ({ r: randomRank(rng), s }));
+  if (rng() < JOKER_CHANCE) cards[Math.floor(rng() * cards.length)] = { j: 1 };
+  return { shape: shape.id, w: shape.w, h: shape.h, s, cells: shape.cells, cards };
 }
 
-// Reproduzierbarer Zufall (für Tests und später für Tages-Challenges).
-export function seededRng(seed) {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
+// Reproduzierbarer Zufall (Mulberry32). Der Zustand liegt in holder.rng, damit er mit dem Spielstand
+// gespeichert wird – so bleibt die Tages-Challenge auch nach dem Neuladen für alle gleich.
+export function nextRandom(holder) {
+  holder.rng = (holder.rng + 0x6d2b79f5) >>> 0;
+  let t = holder.rng;
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 }
+
+export const rngOf = (holder) => () => nextRandom(holder);
+export const seededRng = (seed) => rngOf({ rng: seed >>> 0 });
