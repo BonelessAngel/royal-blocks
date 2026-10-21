@@ -5,7 +5,7 @@ import {
   blastAt, foldTray, missionText, previewPlacement, recolorPiece, requirementFor,
 } from '../src/game.js';
 import { SHAPES, randomPiece, seededRng } from '../src/pieces.js';
-import { newMission as newMissionFor } from '../src/game.js';
+import { HELP, dealTray, lineHints, newMission as newMissionFor } from '../src/game.js';
 
 const card = (r, s) => ({ r, s });
 const single = (c = card(2, 0)) => ({ shape: 0, w: 1, h: 1, cells: [[0, 0]], cards: [c] });
@@ -320,4 +320,34 @@ test('Spielende lässt sich mit einem Spezialzug abwenden', () => {
   game.over = true;
   blastAt(game, idx(0, 7));
   assert.equal(game.over, false, 'nach dem Sprengen passt das Teil wieder');
+});
+
+test('Hinweise kommen nur aus fast vollen Reihen', () => {
+  const board = new Array(64).fill(null);
+  // Reihe 0: 6 Karten (fast voll), Reihe 4: nur 2 Karten
+  for (let x = 0; x < 6; x++) board[idx(x, 0)] = card(7, 2);
+  board[idx(0, 4)] = card(13, 0);
+  board[idx(1, 4)] = card(13, 0);
+  const hints = lineHints(board);
+  assert.ok(hints.ranks.length >= 6 && hints.ranks.every((r) => r === 7 || r === 13));
+  assert.ok(hints.ranks.filter((r) => r === 7).length >= 6);
+  assert.ok(hints.suits.includes(2));
+});
+
+test('hilfreiches Austeilen gibt öfter Teile, die eine Reihe abräumen', () => {
+  // Reihe 7 bis auf ein Feld voll, mit einem Paar Asse → jedes Teil, das passt, räumt ab
+  const board = new Array(64).fill(null);
+  [card(14, 0), card(14, 1), card(3, 2), card(5, 3), card(7, 0), card(9, 1), card(11, 2)].forEach((c, x) => (board[idx(x, 7)] = c));
+  for (let y = 0; y < 7; y++) for (let x = 0; x < 8; x++) if (x !== 7 && (x + y) % 2) board[idx(x, y)] = card(2, 0);
+  const canClear = (tray) => tray.some((p) => p.cells.length === 1 || (p.w === 1 && p.cells.length <= 8));
+  const count = (chance) => {
+    HELP.chance = chance;
+    let hits = 0;
+    for (let s = 1; s <= 150; s++) if (canClear(dealTray(board, seededRng(s), 1))) hits++;
+    return hits;
+  };
+  const without = count(0);
+  const withHelp = count(1);
+  HELP.chance = 0.6;
+  assert.ok(withHelp > without, `${withHelp} mit Hilfe, ${without} ohne`);
 });
