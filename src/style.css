@@ -1,0 +1,462 @@
+:root {
+  --bg: #0d0420;
+  --bg2: #22094a;
+  --panel: #1a0b38;
+  --line: #3b1f6e;
+  --text: #f4ecff;
+  --muted: #a99bc9;
+  --gold: #ffd34d;
+  --pink: #ff3d8b;
+  --cyan: #3ee8ff;
+  --cell: 40px; /* wird von main.js passend zum Bildschirm gesetzt */
+  --gap: 3px;
+  --s0: #3ee8ff; /* Pik */
+  --s1: #ff3d8b; /* Herz */
+  --s2: #ffb52e; /* Karo */
+  --s3: #4dff88; /* Kreuz */
+  --s0d: #0b6f9c;
+  --s1d: #a3105a;
+  --s2d: #b05a00;
+  --s3d: #0f8a45;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: radial-gradient(120% 80% at 50% 30%, var(--bg2), var(--bg) 70%) fixed, var(--bg);
+  color: var(--text);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+button { font: inherit; color: inherit; }
+
+#app {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: calc(env(safe-area-inset-top) + 10px) 12px calc(env(safe-area-inset-bottom) + 10px);
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+#app.shake { animation: shake 0.45s; }
+#app.shake-big { animation: shake-big 0.7s; }
+
+/* ---------- Kopfzeile ---------- */
+.top {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  min-height: 64px;
+}
+
+.best { display: flex; flex-direction: column; font-weight: 700; color: var(--gold); text-shadow: 0 0 10px rgba(255, 211, 77, 0.5); }
+.best .label { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); text-shadow: none; }
+.best #best { font-size: 18px; }
+
+.score-box { text-align: center; }
+.score {
+  font-size: 42px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 12px rgba(255, 61, 139, 0.8), 0 0 28px rgba(62, 232, 255, 0.35);
+  line-height: 1;
+  transition: transform 0.12s;
+}
+.score.bump { transform: scale(1.12); }
+
+.streak {
+  height: 18px;
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--gold);
+  text-shadow: 0 0 8px rgba(255, 211, 77, 0.8);
+}
+.streak.fading { opacity: 0.45; }
+
+.icon-btn {
+  justify-self: end;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+.icon-btn span { display: block; width: 18px; height: 2px; border-radius: 2px; background: var(--text); }
+
+/* ---------- Vorschau der Pokerhand ---------- */
+.preview {
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.preview .tag {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(255, 211, 77, 0.12);
+  border: 1px solid rgba(255, 211, 77, 0.6);
+  color: var(--gold);
+  box-shadow: 0 0 12px rgba(255, 211, 77, 0.35);
+}
+.preview .tag.t1 { color: var(--cyan); border-color: rgba(62, 232, 255, 0.6); background: rgba(62, 232, 255, 0.1); box-shadow: 0 0 12px rgba(62, 232, 255, 0.3); }
+.preview .tag.t0 { color: var(--muted); border-color: var(--line); background: transparent; box-shadow: none; }
+
+/* ---------- Spielfeld ---------- */
+.board-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 0;
+}
+
+.board {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(8, var(--cell));
+  grid-template-rows: repeat(8, var(--cell));
+  gap: var(--gap);
+  padding: var(--gap);
+  border-radius: 14px;
+  background: rgba(8, 2, 22, 0.85);
+  border: 1px solid var(--line);
+  box-shadow: 0 0 0 1px rgba(255, 61, 139, 0.15), 0 0 40px rgba(122, 44, 255, 0.25), inset 0 0 30px rgba(0, 0, 0, 0.6);
+}
+
+.cell {
+  position: relative;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.035);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+/* Karten-Kästchen (Feld, Teile, Ziehen, Effekte) */
+.tile {
+  position: relative;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35), inset 0 -3px 0 rgba(0, 0, 0, 0.25), 0 0 10px var(--glow);
+}
+.tile .r { font-size: calc(var(--size) * 0.44); letter-spacing: -0.04em; }
+.tile .s { font-size: calc(var(--size) * 0.3); margin-top: 1px; }
+.tile.s0 { --glow: rgba(62, 232, 255, 0.45); background: linear-gradient(160deg, var(--s0), var(--s0d)); }
+.tile.s1 { --glow: rgba(255, 61, 139, 0.45); background: linear-gradient(160deg, var(--s1), var(--s1d)); }
+.tile.s2 { --glow: rgba(255, 181, 46, 0.45); background: linear-gradient(160deg, var(--s2), var(--s2d)); }
+.tile.s3 { --glow: rgba(77, 255, 136, 0.45); background: linear-gradient(160deg, var(--s3), var(--s3d)); }
+
+.cell > .tile { position: absolute; inset: 0; --size: var(--cell); }
+.cell > .tile.pop { animation: pop-in 0.18s ease-out; }
+
+/* Schatten des Teils beim Ziehen */
+.cell.ghost::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  background: var(--ghost);
+  opacity: 0.38;
+  box-shadow: 0 0 12px var(--ghost);
+}
+.cell.ghost.g0 { --ghost: var(--s0); }
+.cell.ghost.g1 { --ghost: var(--s1); }
+.cell.ghost.g2 { --ghost: var(--s2); }
+.cell.ghost.g3 { --ghost: var(--s3); }
+
+/* Reihen, die mit diesem Zug voll würden */
+.cell.will-clear > .tile, .cell.will-clear::after { filter: brightness(1.35); }
+.cell.will-clear { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.55), 0 0 14px rgba(255, 255, 255, 0.4); }
+/* Karten, die die Pokerhand bilden: goldener Rahmen über dem Kästchen */
+.cell.hand-card::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  z-index: 2;
+  border-radius: 8px;
+  border: 2px solid var(--gold);
+  box-shadow: 0 0 14px var(--gold), inset 0 0 8px rgba(255, 211, 77, 0.6);
+  animation: pulse-glow 0.7s infinite alternate;
+}
+
+/* verschwindende Kästchen (liegen über dem Feld) */
+.fx-tile {
+  position: fixed;
+  z-index: 20;
+  pointer-events: none;
+  animation: clear-out 0.5s ease-in forwards;
+}
+.fx-tile.hand { animation: hand-flash 0.75s ease-in forwards; }
+.fx-tile.hand::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 8px;
+  border: 2px solid var(--gold);
+  box-shadow: 0 0 18px var(--gold), inset 0 0 10px var(--gold);
+}
+
+/* Schriftzug in der Mitte */
+.banner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 25;
+  text-align: center;
+}
+.banner .hand-name {
+  font-size: clamp(30px, 10vw, 52px);
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 0 10px var(--tone), 0 0 30px var(--tone), 0 4px 0 rgba(0, 0, 0, 0.5);
+  animation: banner 1.1s cubic-bezier(0.2, 1.4, 0.4, 1) forwards;
+  --tone: var(--cyan);
+}
+.banner .hand-name.tier1 { --tone: var(--pink); }
+.banner .hand-name.tier2 { --tone: var(--gold); font-size: clamp(36px, 12vw, 62px); }
+.banner .hand-name.tier3 { --tone: var(--gold); font-size: clamp(40px, 13vw, 70px); animation-duration: 1.8s; }
+.banner .extra {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  text-shadow: 0 0 10px rgba(255, 211, 77, 0.9);
+  animation: banner 1.1s 0.08s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+.banner .points {
+  margin-top: 6px;
+  font-size: 26px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 0 12px var(--pink);
+  animation: float-up 1.1s ease-out forwards;
+}
+
+/* ---------- Ablage unten ---------- */
+.tray {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  align-items: center;
+  height: calc(var(--cell) * 3.4);
+  min-height: 110px;
+  margin-top: 8px;
+}
+.slot {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+}
+.slot.empty { cursor: default; }
+.slot.dragging .piece { opacity: 0.15; }
+.slot.no-fit .piece { opacity: 0.35; filter: grayscale(0.8); }
+.slot .piece.deal { animation: deal 0.35s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+.slot[data-slot='1'] .piece.deal { animation-delay: 0.06s; }
+.slot[data-slot='2'] .piece.deal { animation-delay: 0.12s; }
+
+.piece {
+  display: grid;
+  gap: calc(var(--gap) * 0.7);
+  --size: calc(var(--cell) * 0.56);
+  grid-auto-rows: var(--size);
+  grid-auto-columns: var(--size);
+}
+.piece .tile { border-radius: 4px; }
+
+/* Teil unter dem Finger */
+.drag {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 30;
+  pointer-events: none;
+  display: none;
+}
+.drag.on { display: block; }
+.drag .piece { --size: var(--cell); gap: var(--gap); filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.55)); }
+.drag.back { transition: transform 0.18s ease-in; }
+
+.fx {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 40;
+  pointer-events: none;
+}
+
+/* ---------- Fenster ---------- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(5, 1, 14, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: fade 0.2s;
+  touch-action: auto;
+}
+.overlay[hidden] { display: none; }
+
+.panel {
+  width: min(380px, 100%);
+  max-height: 100%;
+  padding: 22px 20px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, #24104a, var(--panel));
+  border: 1px solid var(--line);
+  box-shadow: 0 0 0 1px rgba(255, 61, 139, 0.2), 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(122, 44, 255, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: center;
+}
+.panel.scroll { overflow-y: auto; text-align: left; }
+.panel h2 {
+  margin: 0 0 6px;
+  text-align: center;
+  font-size: 26px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-shadow: 0 0 14px rgba(255, 61, 139, 0.8);
+}
+.panel p { margin: 0; color: var(--muted); }
+.small { font-size: 12px; color: var(--muted); text-align: center; }
+
+.btn {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.05);
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
+}
+.btn:active { transform: scale(0.98); }
+.btn.primary {
+  border: none;
+  background: linear-gradient(135deg, var(--pink), #9a2bff);
+  box-shadow: 0 0 20px rgba(255, 61, 139, 0.5);
+}
+.btn.big { min-height: 58px; font-size: 19px; }
+.btn.danger { color: #ff8fb8; }
+
+.rules { margin: 0; padding-left: 20px; line-height: 1.45; }
+.rules li { margin-bottom: 6px; }
+
+.hands { width: 100%; border-collapse: collapse; font-size: 14px; }
+.hands td { padding: 5px 4px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+.hands td:last-child { text-align: right; font-weight: 800; color: var(--gold); }
+.hands .ex { display: flex; gap: 2px; }
+.hands .tile { --size: 22px; width: 18px; height: 24px; border-radius: 3px; font-size: 10px; box-shadow: none; }
+.hands .tile .r { font-size: 10px; }
+.hands .tile .s { font-size: 8px; }
+
+.final-score {
+  font-size: 56px;
+  font-weight: 900;
+  text-shadow: 0 0 14px rgba(255, 61, 139, 0.9), 0 0 34px rgba(62, 232, 255, 0.4);
+}
+.new-record {
+  align-self: center;
+  padding: 4px 14px;
+  border-radius: 999px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #1a0b00;
+  background: var(--gold);
+  box-shadow: 0 0 22px var(--gold);
+  animation: pulse 1s infinite alternate;
+}
+.new-record[hidden] { display: none; }
+.stats { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; margin: 4px 0 10px; text-align: left; }
+.stats dt { color: var(--muted); }
+.stats dd { margin: 0; font-weight: 800; text-align: right; }
+
+/* ---------- Animationen ---------- */
+@keyframes pop-in { from { transform: scale(0.6); } 70% { transform: scale(1.08); } to { transform: scale(1); } }
+@keyframes clear-out {
+  0% { transform: scale(1); filter: brightness(1); opacity: 1; }
+  30% { transform: scale(1.15); filter: brightness(2.2); opacity: 1; }
+  100% { transform: scale(0.2) rotate(25deg); filter: brightness(3); opacity: 0; }
+}
+@keyframes hand-flash {
+  0% { transform: scale(1); filter: brightness(1); }
+  35% { transform: scale(1.18); filter: brightness(1.8); }
+  60% { transform: scale(1.12); filter: brightness(2); opacity: 1; }
+  100% { transform: scale(0.2) rotate(-25deg); filter: brightness(3); opacity: 0; }
+}
+@keyframes banner {
+  0% { transform: scale(0.3); opacity: 0; }
+  20% { transform: scale(1.1); opacity: 1; }
+  75% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.1) translateY(-10px); opacity: 0; }
+}
+@keyframes float-up { 0% { transform: translateY(10px); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(-40px); opacity: 0; } }
+@keyframes deal { from { transform: scale(0.3) translateY(30px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes fade { from { opacity: 0; } }
+@keyframes pulse { to { transform: scale(1.06); } }
+@keyframes pulse-glow { to { opacity: 0.55; } }
+@keyframes shake {
+  20% { transform: translate(-4px, 2px); } 40% { transform: translate(4px, -2px); }
+  60% { transform: translate(-3px, -1px); } 80% { transform: translate(2px, 1px); }
+}
+@keyframes shake-big {
+  10% { transform: translate(-8px, 4px) rotate(-0.6deg); } 25% { transform: translate(8px, -4px) rotate(0.6deg); }
+  40% { transform: translate(-6px, -2px); } 55% { transform: translate(6px, 2px); }
+  70% { transform: translate(-3px, 1px); } 85% { transform: translate(2px, -1px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #app.shake, #app.shake-big { animation: none; }
+}

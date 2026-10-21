@@ -1,0 +1,17 @@
+{
+  "name": "royal-blocks",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Block-Puzzle mit Pokerhänden für bens-games.de",
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/serve.mjs src 5173",
+    "build": "node scripts/build.mjs",
+    "preview": "node scripts/build.mjs && node scripts/serve.mjs dist 5174",
+    "icons": "node scripts/make-icons.mjs",
+    "test": "node --test \"tests/*.test.mjs\""
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

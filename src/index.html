@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="de" data-version="dev">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'">
+  <title>Royal Blocks</title>
+  <meta name="description" content="Block-Puzzle mit Pokerhänden: Reihen füllen, Hände bilden, Punkte abräumen.">
+  <meta name="theme-color" content="#0d0420">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Royal Blocks">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="main.js"></script>
+</head>
+<body>
+  <div id="app">
+    <header class="top">
+      <div class="best"><span class="label">Rekord</span><span id="best">0</span></div>
+      <div class="score-box">
+        <div id="score" class="score">0</div>
+        <div id="streak" class="streak"></div>
+      </div>
+      <button id="menu-btn" class="icon-btn" type="button" aria-label="Menü">
+        <span></span><span></span><span></span>
+      </button>
+    </header>
+
+    <div id="preview" class="preview" aria-live="polite"></div>
+
+    <main class="board-wrap">
+      <div id="board" class="board" aria-label="Spielfeld"></div>
+      <div id="banner" class="banner" aria-live="polite"></div>
+    </main>
+
+    <footer id="tray" class="tray" aria-label="Teile">
+      <div class="slot" data-slot="0"></div>
+      <div class="slot" data-slot="1"></div>
+      <div class="slot" data-slot="2"></div>
+    </footer>
+  </div>
+
+  <div id="drag" class="drag" aria-hidden="true"></div>
+  <canvas id="fx" class="fx" aria-hidden="true"></canvas>
+
+  <div id="menu" class="overlay" hidden>
+    <div class="panel">
+      <h2>Pause</h2>
+      <button class="btn primary" data-action="resume" type="button">Weiterspielen</button>
+      <button class="btn" data-action="help" type="button">Pokerhände &amp; Regeln</button>
+      <button class="btn" data-action="sound" type="button">Ton: <b id="sound-state">an</b></button>
+      <button class="btn" data-action="vibration" type="button">Vibration: <b id="vibration-state">an</b></button>
+      <button class="btn danger" data-action="new" type="button">Neues Spiel</button>
+      <p class="small">Royal Blocks <span id="version"></span> · Spielstand nur auf diesem Gerät</p>
+    </div>
+  </div>
+
+  <div id="confirm-new" class="overlay" hidden>
+    <div class="panel">
+      <h2>Neues Spiel?</h2>
+      <p>Die laufende Runde geht verloren.</p>
+      <button class="btn danger" data-action="new-confirm" type="button">Ja, neu starten</button>
+      <button class="btn" data-action="resume" type="button">Abbrechen</button>
+    </div>
+  </div>
+
+  <div id="help" class="overlay" hidden>
+    <div class="panel scroll">
+      <h2>So geht's</h2>
+      <ol class="rules">
+        <li>Zieh die Teile von unten auf das Feld.</li>
+        <li>Ist eine Reihe oder Spalte voll, wird sie zur <b>Pokerhand</b> – und verschwindet.</li>
+        <li>Je besser die Hand, desto mehr Punkte. Mehrere Reihen auf einmal und Serien geben Extra-Faktoren.</li>
+        <li>Passt kein Teil mehr, ist die Runde vorbei.</li>
+      </ol>
+      <p class="small">Aus den 8 Karten einer Reihe zählen die besten 5.</p>
+      <table class="hands" id="hand-table"></table>
+      <button class="btn primary" data-action="resume" type="button">Los geht's</button>
+    </div>
+  </div>
+
+  <div id="gameover" class="overlay" hidden>
+    <div class="panel">
+      <h2>Keine Züge mehr</h2>
+      <div id="new-record" class="new-record" hidden>Neuer Rekord!</div>
+      <div class="final-score" id="final-score">0</div>
+      <dl class="stats">
+        <dt>Rekord</dt><dd id="final-best">0</dd>
+        <dt>Beste Hand</dt><dd id="final-hand">–</dd>
+        <dt>Reihen</dt><dd id="final-lines">0</dd>
+      </dl>
+      <button class="btn primary big" data-action="new-confirm" type="button">Nochmal spielen</button>
+    </div>
+  </div>
+</body>
+</html>
