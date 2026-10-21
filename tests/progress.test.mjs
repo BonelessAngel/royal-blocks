@@ -46,3 +46,43 @@ test('Lob passt zur Stärke', () => {
   assert.notEqual(praiseFor(1, 1), praiseFor(6, 1));
   assert.equal(praiseFor(9, 3), praiseFor(9, 1), 'nach oben begrenzt');
 });
+
+test('Jackpot: Royal Flush alles, Straight Flush ein Viertel, sonst nichts', async () => {
+  const { jackpotWin } = await import('../src/progress.js');
+  assert.equal(jackpotWin(9, 1000), 1000);
+  assert.equal(jackpotWin(8, 1000), 250);
+  assert.equal(jackpotWin(7, 1000), 0);
+});
+
+test('Rubbellos: Gewinne passen zu den Zeichen', async () => {
+  const { scratchPrize } = await import('../src/progress.js');
+  let r = 1;
+  const rand = () => ((r = (r * 16807) % 2147483647) / 2147483647);
+  const seen = new Set();
+  for (let k = 0; k < 2000; k++) {
+    const p = scratchPrize(rand);
+    seen.add(p.tier);
+    const same = Math.max(...p.symbols.map((s) => p.symbols.filter((x) => x === s).length));
+    assert.equal(p.symbols.length, 3);
+    if (p.tier >= 2) assert.equal(same, 3);
+    if (p.tier === 1) assert.equal(same, 2);
+    if (p.tier === 0) assert.equal(same, 1);
+    assert.ok(p.chips > 0);
+  }
+  assert.equal(seen.size, 4, 'alle Gewinnstufen kommen vor');
+});
+
+test('Statistik zählt Hände, Reihen und Runden', async () => {
+  const { emptyStats, recordMove, recordRound } = await import('../src/progress.js');
+  const s = emptyStats();
+  recordMove(s, { lines: [{ hand: { level: 5 } }, { hand: { level: 1 } }], golden: 1, feverStart: true, mission: {}, chips: 20 }, 4);
+  recordRound(s, { score: 1234 });
+  assert.equal(s.hands[5], 1);
+  assert.equal(s.lines, 2);
+  assert.equal(s.golden, 1);
+  assert.equal(s.fevers, 1);
+  assert.equal(s.missions, 1);
+  assert.equal(s.bestStreak, 4);
+  assert.equal(s.games, 1);
+  assert.equal(s.bestScore, 1234);
+});
