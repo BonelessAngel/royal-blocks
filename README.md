@@ -83,6 +83,7 @@ Voraussetzung: [Node.js](https://nodejs.org) ab Version 20. Es gibt **keine** Ab
 | `src/pieces.js` | Formen der Teile, Karten, Zufall |
 | `src/game.js` | Spielregeln ohne Anzeige: Setzen, Abräumen, Punkte, Spielende |
 | `src/main.js` | Anzeige, Ziehen, Effekte, Menü |
+| `src/platform.js` | Ausfallsichere Statistik- und Ranglisten-Anbindung der Plattform |
 | `src/fx.js`, `src/audio.js` | Partikel, Töne (im Browser erzeugt), Vibration |
 | `src/storage.js` | Rekorde, Chips, Designs, Einstellungen und laufende Runden im Browser (`localStorage`, Präfix `royal-blocks:`) |
 | `src/sw.js` | Service Worker (Vorlage, der Build setzt Cache-Name und Dateiliste ein) |
@@ -103,14 +104,18 @@ Voraussetzung: [Node.js](https://nodejs.org) ab Version 20. Es gibt **keine** Ab
 Dateiliste des Builds (gleich wie `scripts/files.mjs`):
 
 ```
-index.html, style.css, main.js, game.js, poker.js, pieces.js, audio.js, fx.js, storage.js, progress.js, scratch.js,
+index.html, style.css, main.js, platform.js, game.js, poker.js, pieces.js, audio.js, fx.js, storage.js, progress.js, scratch.js,
 manifest.webmanifest, sw.js, icon-180.png, icon-192.png, icon-512.png
 ```
 
-Anforderungen (geprüft in `tests/build.test.mjs`): nur relative Pfade, Manifest mit `scope`/`start_url` = `/games/royal-blocks/`,
+Anforderungen (geprüft in `tests/build.test.mjs`): eigene Dateien nur über relative Pfade, Ranglisten-Link zur Plattform,
+Manifest mit `scope`/`start_url` = `/games/royal-blocks/`,
 Symbole 192 und 512 px, keine externen Quellen (Systemschrift, keine Schriftdateien), nichts unter `/icons/`,
 eigener Service Worker nur für den Spielordner, löscht nur eigene Caches (`royal-blocks-…`).
-Das Spiel sendet **keine Daten** an Server; alles bleibt im Browser.
+Spielstände, Einstellungen und Fortschritt bleiben im Browser. In Release-Builds sendet das Spiel die in der Plattform-Schnittstelle
+festgelegten anonymen Nutzungsereignisse; bei angemeldeten Konten zusätzlich Bestwerte für die Rangliste. Freitexte, Namen,
+E-Mail-Adressen und Konto-IDs werden nie vom Spiel gesendet. Im Dev-/Testmodus, auf localhost und bei aktiviertem Global Privacy
+Control bleibt die Anbindung vollständig aus. Netzwerkfehler beeinflussen das Spiel nicht.
 
 ## Zuständigkeit
 

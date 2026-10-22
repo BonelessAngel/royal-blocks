@@ -8,6 +8,7 @@ export const BUILD_FILES = [
   'index.html',
   'style.css',
   'main.js',
+  'platform.js',
   'game.js',
   'poker.js',
   'pieces.js',
