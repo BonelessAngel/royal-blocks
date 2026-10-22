@@ -57,9 +57,11 @@ test('index.html lädt eigene Dateien nur relativ', () => {
   const refs = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map((m) => m[1]);
   assert.ok(refs.length >= 5);
   for (const ref of refs) {
+    if (ref === `/ranglisten/?spiel=${GAME_ID}`) continue;
     assert.ok(!ref.startsWith('/'), `${ref} ist nicht relativ`);
     assert.ok(BUILD_FILES.includes(ref), `${ref} fehlt im Build`);
   }
+  assert.ok(refs.includes(`/ranglisten/?spiel=${GAME_ID}`), 'Ranglisten-Link fehlt');
   assert.match(html, /data-version="\d+\.\d+\.\d+"/);
 });
 

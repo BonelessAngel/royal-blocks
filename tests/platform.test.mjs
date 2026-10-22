@@ -1,0 +1,164 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { createPlatformClient, platformEnabled, randomVisit } from '../src/platform.js';
+
+function fakeDocument() {
+  const listeners = new Map();
+  return {
+    visibilityState: 'visible',
+    addEventListener(type, listener) { listeners.set(type, listener); },
+    removeEventListener(type) { listeners.delete(type); },
+    dispatch(type) { listeners.get(type)?.(); },
+  };
+}
+
+const response = (body = {}, ok = true) => ({ ok, json: async () => body });
+
+function setup(fetchImpl) {
+  let time = 0;
+  let interval = null;
+  const documentObject = fakeDocument();
+  const client = createPlatformClient({
+    version: '1.4.0', fetchImpl, documentObject, locationObject: { hostname: 'bens-games.de' },
+    navigatorObject: { globalPrivacyControl: false },
+    cryptoObject: { getRandomValues(bytes) { bytes.forEach((_, index) => { bytes[index] = index; }); } },
+    now: () => time,
+    setIntervalImpl(callback, milliseconds) { interval = { callback, milliseconds }; return 1; },
+    clearIntervalImpl() {},
+  });
+  return { client, documentObject, advance(milliseconds) { time += milliseconds; }, interval: () => interval };
+}
+
+test('nur Releases ohne Global Privacy Control senden', () => {
+  assert.equal(platformEnabled('1.4.0', {}, { hostname: 'bens-games.de' }), true);
+  assert.equal(platformEnabled('dev', {}, { hostname: 'bens-games.de' }), false);
+  assert.equal(platformEnabled('test', {}, { hostname: 'bens-games.de' }), false);
+  assert.equal(platformEnabled('1.4.0-test', {}, { hostname: 'bens-games.de' }), false);
+  assert.equal(platformEnabled('1.4.0', {}, { hostname: 'localhost' }), false);
+  assert.equal(platformEnabled('1.4.0', { globalPrivacyControl: true }, { hostname: 'bens-games.de' }), false);
+});
+
+test('visit ist pro Client zufällig, 32-stellig hexadezimal und bleibt im Speicher', () => {
+  const a = randomVisit({ getRandomValues(bytes) { bytes.fill(0xab); } });
+  const b = randomVisit({ getRandomValues(bytes) { bytes.fill(0xcd); } });
+  assert.equal(a, 'ab'.repeat(16));
+  assert.equal(b, 'cd'.repeat(16));
+  assert.match(a, /^[0-9a-f]{32}$/);
+  assert.notEqual(a, b);
+});
+
+test('start, sichtbare Heartbeats und Levelereignisse werden gebündelt gesendet', async () => {
+  const calls = [];
+  const env = setup(async (url, options) => { calls.push({ url, options }); return response({ stored: 3 }); });
+  assert.equal(env.client.start(), true);
+  assert.equal(env.interval().milliseconds, 60_000);
+  assert.equal(env.client.beginLevel('klassisch'), true);
+
+  env.advance(61_500);
+  await env.client.heartbeat();
+  const first = JSON.parse(calls[0].options.body);
+  assert.equal(calls[0].url, '/api/events');
+  assert.equal(calls[0].options.credentials, 'same-origin');
+  assert.equal(first.app, 'royal-blocks');
+  assert.match(first.visit, /^[0-9a-f]{32}$/);
+  assert.deepEqual(first.events, [
+    { type: 'start' },
+    { type: 'level_start', level: 'klassisch' },
+    { type: 'heartbeat', seconds: 61 },
+  ]);
+
+  env.advance(4_500);
+  env.documentObject.visibilityState = 'hidden';
+  env.documentObject.dispatch('visibilitychange');
+  await new Promise((resolve) => setImmediate(resolve));
+  const hidden = JSON.parse(calls[1].options.body);
+  assert.equal(calls[1].options.keepalive, true);
+  assert.deepEqual(hidden.events, [{ type: 'heartbeat', seconds: 5 }]);
+
+  env.advance(120_000);
+  await env.client.heartbeat();
+  assert.equal(calls.length, 2, 'versteckte Zeit erzeugt keinen Heartbeat');
+
+  env.documentObject.visibilityState = 'visible';
+  env.documentObject.dispatch('visibilitychange');
+  env.advance(3_000);
+  assert.equal(env.client.endLevel({ result: 'lose', score: 1234, stars: 0, data: { lines: 7, hand_flush: 2 } }), true);
+  await env.client.flush();
+  const ended = JSON.parse(calls[2].options.body).events[0];
+  assert.deepEqual(ended, {
+    type: 'level_end', level: 'klassisch', result: 'lose', score: 1234, stars: 0, seconds: 69,
+    data: { lines: 7, hand_flush: 2 },
+  });
+});
+
+test('Ereignisdaten lassen keine Freitexte oder ungültigen Werte durch', () => {
+  const env = setup(async () => response());
+  env.client.start();
+  env.client.beginLevel('taeglich');
+  env.client.endLevel({
+    result: 'abort', score: -4, stars: 99,
+    data: { lines: 3, hero: 'vega', note: 'Freier Text!', BadKey: 4, negative: -1, float: 1.5 },
+  });
+  const ended = env.client.pending().at(-1);
+  assert.equal(ended.score, 0);
+  assert.equal(ended.stars, 10);
+  assert.deepEqual(ended.data, { lines: 3, hero: 'vega' });
+});
+
+test('Ranglisten melden nur mit CSRF-Token eines angemeldeten Kontos', async () => {
+  const calls = [];
+  const env = setup(async (url, options = {}) => {
+    calls.push({ url, options });
+    if (url === '/api/account/me') return response({ csrf_token: 'token-123' });
+    return response({ week: { rank: 4, score: 12500 }, all: { rank: 17, score: 12500 }, listed: true });
+  });
+  env.client.start();
+  const result = await env.client.submitScore('klassisch', 12500);
+  assert.equal(result.week.rank, 4);
+  assert.equal(calls[0].url, '/api/account/me');
+  assert.equal(calls[1].url, '/api/games/royal-blocks/scores');
+  assert.equal(calls[1].options.headers['X-CSRF-Token'], 'token-123');
+  assert.deepEqual(JSON.parse(calls[1].options.body), { board: 'klassisch', score: 12500 });
+});
+
+test('ohne Konto oder Netz bleiben Statistik und Rangliste folgenlos', async () => {
+  const calls = [];
+  const env = setup(async (url) => {
+    calls.push(url);
+    if (url === '/api/account/me') return response({}, false);
+    throw new Error('offline');
+  });
+  env.client.start();
+  assert.equal(await env.client.submitScore('klassisch', 100), null);
+  assert.deepEqual(calls, ['/api/account/me']);
+  assert.equal(await env.client.flush(), null);
+
+  let disabledCalls = 0;
+  const disabled = createPlatformClient({
+    version: 'dev', fetchImpl: async () => { disabledCalls++; }, locationObject: { hostname: 'localhost' },
+  });
+  disabled.start();
+  disabled.beginLevel('klassisch');
+  disabled.endLevel({ result: 'lose', score: 10 });
+  await disabled.flush();
+  await disabled.submitScore('klassisch', 10);
+  assert.equal(disabledCalls, 0);
+});
+
+test('eine spätere Anmeldung wird nach einer anonym gestarteten Runde erkannt', async () => {
+  let accountChecks = 0;
+  let scorePosts = 0;
+  const env = setup(async (url) => {
+    if (url === '/api/account/me') {
+      accountChecks++;
+      return response(accountChecks === 1 ? {} : { csrf_token: 'spaeter-angemeldet' }, accountChecks > 1);
+    }
+    scorePosts++;
+    return response({ listed: false, week: { rank: null } });
+  });
+  env.client.start();
+  assert.equal(await env.client.prepareAccount(), null);
+  assert.equal((await env.client.submitScore('klassisch', 42)).listed, false);
+  assert.equal(accountChecks, 2);
+  assert.equal(scorePosts, 1);
+});
