@@ -57,11 +57,12 @@ test('index.html lädt eigene Dateien nur relativ', () => {
   const refs = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map((m) => m[1]);
   assert.ok(refs.length >= 5);
   for (const ref of refs) {
-    if (ref === `/ranglisten/?spiel=${GAME_ID}`) continue;
+    if (ref === '/' || ref === `/ranglisten/?spiel=${GAME_ID}`) continue;
     assert.ok(!ref.startsWith('/'), `${ref} ist nicht relativ`);
     assert.ok(BUILD_FILES.includes(ref), `${ref} fehlt im Build`);
   }
   assert.ok(refs.includes(`/ranglisten/?spiel=${GAME_ID}`), 'Ranglisten-Link fehlt');
+  assert.ok(refs.includes('/'), 'Plattform-Rücklink fehlt');
   assert.match(html, /data-version="\d+\.\d+\.\d+"/);
 });
 
@@ -81,6 +82,8 @@ test('Service Worker: eigener Cache-Name, alle Dateien vorgemerkt, fremde Caches
   const files = JSON.parse(sw.match(/const FILES = (\[[^\]]*\]);/)[1]);
   assert.deepEqual([...files].sort(), ['./', ...BUILD_FILES.filter((f) => f !== 'sw.js')].sort());
   assert.match(sw, /key\.startsWith\('royal-blocks-'\) && key !== CACHE/);
+  assert.match(sw, /url\.pathname\.startsWith\('\/api\/'\)/, 'API-Antworten dürfen nie gecacht werden');
+  assert.match(sw, /event\.data\?\.type === 'SKIP_WAITING'/, 'Updates werden erst nach Bestätigung aktiviert');
   assert.doesNotMatch(sw, /caches\.delete\((?!key)/);
 });
 
