@@ -8,9 +8,12 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
       .open(CACHE)
-      .then((cache) => cache.addAll(FILES.map((file) => new Request(file, { cache: 'reload' }))))
-      .then(() => self.skipWaiting()),
+      .then((cache) => cache.addAll(FILES.map((file) => new Request(file, { cache: 'reload' })))),
   );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
@@ -26,6 +29,7 @@ self.addEventListener('fetch', (event) => {
   const request = event.request;
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
+  if (url.pathname.startsWith('/api/')) return;
   if (url.origin !== self.location.origin || !url.pathname.startsWith(new URL(self.registration.scope).pathname)) return;
 
   // Seite und Skripte immer aus demselben Cache-Stand, damit nie alte und neue Dateien gemischt werden.

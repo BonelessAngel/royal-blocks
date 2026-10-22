@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { createPlatformClient, platformEnabled, randomVisit } from '../src/platform.js';
+import { createPlatformClient, leaderboardPath, platformEnabled, platformHosted, randomVisit } from '../src/platform.js';
 
 function fakeDocument() {
   const listeners = new Map();
@@ -19,7 +19,8 @@ function setup(fetchImpl) {
   let interval = null;
   const documentObject = fakeDocument();
   const client = createPlatformClient({
-    version: '1.4.0', fetchImpl, documentObject, locationObject: { hostname: 'bens-games.de' },
+    version: '1.5.0', fetchImpl, documentObject,
+    locationObject: { hostname: 'bens-games.de', pathname: '/games/royal-blocks/', protocol: 'https:' },
     navigatorObject: { globalPrivacyControl: false },
     cryptoObject: { getRandomValues(bytes) { bytes.forEach((_, index) => { bytes[index] = index; }); } },
     now: () => time,
@@ -30,12 +31,50 @@ function setup(fetchImpl) {
 }
 
 test('nur Releases ohne Global Privacy Control senden', () => {
-  assert.equal(platformEnabled('1.4.0', {}, { hostname: 'bens-games.de' }), true);
-  assert.equal(platformEnabled('dev', {}, { hostname: 'bens-games.de' }), false);
-  assert.equal(platformEnabled('test', {}, { hostname: 'bens-games.de' }), false);
-  assert.equal(platformEnabled('1.4.0-test', {}, { hostname: 'bens-games.de' }), false);
-  assert.equal(platformEnabled('1.4.0', {}, { hostname: 'localhost' }), false);
-  assert.equal(platformEnabled('1.4.0', { globalPrivacyControl: true }, { hostname: 'bens-games.de' }), false);
+  const deployed = { hostname: 'bens-games.de', pathname: '/games/royal-blocks/', protocol: 'https:' };
+  assert.equal(platformHosted('1.5.0', deployed), true);
+  assert.equal(platformEnabled('1.5.0', {}, deployed), true);
+  assert.equal(platformEnabled('dev', {}, deployed), false);
+  assert.equal(platformEnabled('test', {}, deployed), false);
+  assert.equal(platformEnabled('1.5.0-test', {}, deployed), false);
+  assert.equal(platformEnabled('1.5.0', {}, { ...deployed, hostname: 'localhost' }), false);
+  assert.equal(platformEnabled('1.5.0', {}, { ...deployed, pathname: '/' }), false);
+  assert.equal(platformEnabled('1.5.0', {}, { ...deployed, protocol: 'file:' }), false);
+  assert.equal(platformEnabled('1.5.0', { globalPrivacyControl: true }, deployed), false);
+  assert.equal(platformHosted('1.5.0', deployed), true, 'GPC blendet nur Telemetrie aus, nicht die Kontoanzeige');
+});
+
+test('Hub und Ranglisten-Link verwenden die dokumentierten Spiel-Endpunkte', async () => {
+  const calls = [];
+  const env = setup(async (url, options) => {
+    calls.push({ url, options });
+    return response({ user: null, announcements: [], links: { login: '/anmelden/' } });
+  });
+  const hub = await env.client.fetchHub();
+  assert.equal(calls[0].url, '/api/games/royal-blocks/hub');
+  assert.equal(calls[0].options.credentials, 'same-origin');
+  assert.ok(calls[0].options.signal);
+  assert.equal(hub.links.login, '/anmelden/');
+  assert.equal(leaderboardPath('klassisch'), '/ranglisten/?spiel=royal-blocks&liste=klassisch');
+  assert.equal(leaderboardPath('ungültig!'), '/ranglisten/?spiel=royal-blocks');
+});
+
+test('optionale Hub-Anfrage endet nach drei Sekunden ohne Fehler im Spiel', async () => {
+  let timeout;
+  let milliseconds;
+  const client = createPlatformClient({
+    version: '1.5.0', navigatorObject: {},
+    locationObject: { hostname: 'bens-games.de', pathname: '/games/royal-blocks/', protocol: 'https:' },
+    fetchImpl: async (_url, options) => new Promise((_resolve, reject) => {
+      options.signal.addEventListener('abort', () => reject(new Error('abgebrochen')));
+    }),
+    setTimeoutImpl(callback, delay) { timeout = callback; milliseconds = delay; return 1; },
+    clearTimeoutImpl() {},
+  });
+  const result = client.fetchHub();
+  assert.equal(milliseconds, 3_000);
+  timeout();
+  assert.equal(await result, null);
 });
 
 test('visit ist pro Client zufällig, 32-stellig hexadezimal und bleibt im Speicher', () => {
@@ -135,13 +174,15 @@ test('ohne Konto oder Netz bleiben Statistik und Rangliste folgenlos', async () 
 
   let disabledCalls = 0;
   const disabled = createPlatformClient({
-    version: 'dev', fetchImpl: async () => { disabledCalls++; }, locationObject: { hostname: 'localhost' },
+    version: 'dev', fetchImpl: async () => { disabledCalls++; },
+    locationObject: { hostname: 'localhost', pathname: '/games/royal-blocks/', protocol: 'http:' },
   });
   disabled.start();
   disabled.beginLevel('klassisch');
   disabled.endLevel({ result: 'lose', score: 10 });
   await disabled.flush();
   await disabled.submitScore('klassisch', 10);
+  await disabled.fetchHub();
   assert.equal(disabledCalls, 0);
 });
 
