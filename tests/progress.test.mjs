@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { GIFT_DAYS, chestReward, dailyGift, levelFromXp, levelReward, praiseFor, xpForRound, xpToNext } from '../src/progress.js';
+import { ACHIEVEMENTS, GIFT_DAYS, chestReward, dailyGift, earnedAchievements, levelFromXp, levelReward, praiseFor, xpForRound, xpToNext } from '../src/progress.js';
 
 test('Level aus Erfahrung', () => {
   assert.deepEqual(levelFromXp(0), { level: 1, into: 0, need: xpToNext(1) });
@@ -85,4 +85,17 @@ test('Statistik zählt Hände, Reihen und Runden', async () => {
   assert.equal(s.bestStreak, 4);
   assert.equal(s.games, 1);
   assert.equal(s.bestScore, 1234);
+});
+
+test('Erfolge werden aus dauerhaftem Fortschritt reproduzierbar abgeleitet', () => {
+  const xp25 = Array.from({ length: 24 }, (_, index) => xpToNext(index + 1)).reduce((sum, value) => sum + value, 0);
+  const ids = earnedAchievements({
+    stats: { hands: Array(10).fill(0).map((value, index) => index === 9 ? 1 : value), jackpots: 10 },
+    xp: xp25, gift: { streak: 7 }, proBest: 25_000,
+  });
+  assert.deepEqual(new Set(ids), new Set(Object.keys(ACHIEVEMENTS)));
+  for (const achievement of Object.values(ACHIEVEMENTS)) {
+    assert.ok(achievement.name.length > 3);
+    assert.equal([...achievement.icon].length <= 2, true);
+  }
 });

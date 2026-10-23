@@ -43,6 +43,17 @@ test('App-Symbole haben die angegebene Größe', () => {
   }
 });
 
+test('Erfolge haben deutsche Namen und genau ein Emoji', () => {
+  const achievements = JSON.parse(read('achievements.json'));
+  assert.ok(Object.keys(achievements).length >= 5);
+  const segmenter = new Intl.Segmenter('de', { granularity: 'grapheme' });
+  for (const [id, achievement] of Object.entries(achievements)) {
+    assert.match(id, /^[A-Za-z0-9_.-]{1,64}$/);
+    assert.ok(typeof achievement.name === 'string' && achievement.name.length >= 4);
+    assert.equal([...segmenter.segment(achievement.icon)].length, 1);
+  }
+});
+
 test('keine externen Adressen und nichts unter /icons/', () => {
   for (const file of TEXT_FILES) {
     const text = read(file);
