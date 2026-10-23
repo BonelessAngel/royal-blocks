@@ -12,14 +12,14 @@ function fakeDocument() {
   };
 }
 
-const response = (body = {}, ok = true) => ({ ok, json: async () => body });
+const response = (body = {}, ok = true, status = ok ? 200 : 401) => ({ ok, status, json: async () => body });
 
 function setup(fetchImpl) {
   let time = 0;
   let interval = null;
   const documentObject = fakeDocument();
   const client = createPlatformClient({
-    version: '1.5.0', fetchImpl, documentObject,
+    version: '1.6.0', fetchImpl, documentObject,
     locationObject: { hostname: 'bens-games.de', pathname: '/games/royal-blocks/', protocol: 'https:' },
     navigatorObject: { globalPrivacyControl: false },
     cryptoObject: { getRandomValues(bytes) { bytes.forEach((_, index) => { bytes[index] = index; }); } },
@@ -32,16 +32,16 @@ function setup(fetchImpl) {
 
 test('nur Releases ohne Global Privacy Control senden', () => {
   const deployed = { hostname: 'bens-games.de', pathname: '/games/royal-blocks/', protocol: 'https:' };
-  assert.equal(platformHosted('1.5.0', deployed), true);
-  assert.equal(platformEnabled('1.5.0', {}, deployed), true);
+  assert.equal(platformHosted('1.6.0', deployed), true);
+  assert.equal(platformEnabled('1.6.0', {}, deployed), true);
   assert.equal(platformEnabled('dev', {}, deployed), false);
   assert.equal(platformEnabled('test', {}, deployed), false);
-  assert.equal(platformEnabled('1.5.0-test', {}, deployed), false);
-  assert.equal(platformEnabled('1.5.0', {}, { ...deployed, hostname: 'localhost' }), false);
-  assert.equal(platformEnabled('1.5.0', {}, { ...deployed, pathname: '/' }), false);
-  assert.equal(platformEnabled('1.5.0', {}, { ...deployed, protocol: 'file:' }), false);
-  assert.equal(platformEnabled('1.5.0', { globalPrivacyControl: true }, deployed), false);
-  assert.equal(platformHosted('1.5.0', deployed), true, 'GPC blendet nur Telemetrie aus, nicht die Kontoanzeige');
+  assert.equal(platformEnabled('1.6.0-test', {}, deployed), false);
+  assert.equal(platformEnabled('1.6.0', {}, { ...deployed, hostname: 'localhost' }), false);
+  assert.equal(platformEnabled('1.6.0', {}, { ...deployed, pathname: '/' }), false);
+  assert.equal(platformEnabled('1.6.0', {}, { ...deployed, protocol: 'file:' }), false);
+  assert.equal(platformEnabled('1.6.0', { globalPrivacyControl: true }, deployed), false);
+  assert.equal(platformHosted('1.6.0', deployed), true, 'GPC blendet nur Telemetrie aus, nicht die Kontoanzeige');
 });
 
 test('Hub und Ranglisten-Link verwenden die dokumentierten Spiel-Endpunkte', async () => {
@@ -63,7 +63,7 @@ test('optionale Hub-Anfrage endet nach drei Sekunden ohne Fehler im Spiel', asyn
   let timeout;
   let milliseconds;
   const client = createPlatformClient({
-    version: '1.5.0', navigatorObject: {},
+    version: '1.6.0', navigatorObject: {},
     locationObject: { hostname: 'bens-games.de', pathname: '/games/royal-blocks/', protocol: 'https:' },
     fetchImpl: async (_url, options) => new Promise((_resolve, reject) => {
       options.signal.addEventListener('abort', () => reject(new Error('abgebrochen')));
@@ -158,6 +158,35 @@ test('Ranglisten melden nur mit CSRF-Token eines angemeldeten Kontos', async () 
   assert.equal(calls[1].url, '/api/games/royal-blocks/scores');
   assert.equal(calls[1].options.headers['X-CSRF-Token'], 'token-123');
   assert.deepEqual(JSON.parse(calls[1].options.body), { board: 'klassisch', score: 12500 });
+});
+
+test('Konto-Spielstand lädt und speichert mit CSRF, Zeitstempel und Erfolgen', async () => {
+  const calls = [];
+  const env = setup(async (url, options = {}) => {
+    calls.push({ url, options });
+    if (url === '/api/account/me') return response({ csrf: 'save-token', user: { display_name: 'Ben' } });
+    if (url.endsWith('/save/put')) return response({ status: 'saved', t: 123 });
+    return response({ save: { data: '{"version":1,"values":{}}', t: 100 }, achievements: ['royal_flush'] });
+  });
+  const loaded = await env.client.loadCloudSave();
+  assert.equal(loaded.save.t, 100);
+  const saved = await env.client.putCloudSave('{"version":1,"values":{}}', 123, ['royal_flush', 'ungültig!']);
+  assert.equal(saved.ok, true);
+  const put = calls.find((call) => call.url.endsWith('/save/put'));
+  assert.equal(put.options.headers['X-CSRF-Token'], 'save-token');
+  assert.deepEqual(JSON.parse(put.options.body), {
+    data: '{"version":1,"values":{}}', t: 123, achievements: ['royal_flush'],
+  });
+});
+
+test('neuerer Konto-Spielstand wird als Konflikt zurückgegeben', async () => {
+  const env = setup(async (url) => {
+    if (url === '/api/account/me') return response({ csrf: 'token' });
+    return response({ error: 'newer_save', save: { data: '{}', t: 999 } }, false, 409);
+  });
+  const result = await env.client.putCloudSave('{}', 100, []);
+  assert.equal(result.conflict, true);
+  assert.equal(result.save.t, 999);
 });
 
 test('ohne Konto oder Netz bleiben Statistik und Rangliste folgenlos', async () => {

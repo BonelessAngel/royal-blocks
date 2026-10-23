@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  CELL_POINTS, POWER_COSTS, REQUIREMENTS, SIZE, STREAK_GRACE, TABLE_CLEAR_BONUS, canPlace, createGame, findFullLines, fitsAnywhere, idx, placePiece,
-  blastAt, foldTray, missionText, previewPlacement, recolorPiece, requirementFor,
+  CELL_POINTS, POWER_COSTS, PRO_REQUIREMENTS, REQUIREMENTS, SIZE, STREAK_GRACE, TABLE_CLEAR_BONUS, canPlace, createGame, findFullLines, fitsAnywhere, idx, placePiece,
+  blastAt, foldTray, leaderboardBoard, missionText, powerCost, powerRemaining, previewPlacement, recolorPiece, requirementFor, undoLastMove, upgradeGameState, usePowerCharge,
 } from '../src/game.js';
 import { SHAPES, randomPiece, seededRng } from '../src/pieces.js';
 import { FEVER_MOVES, FEVER_STREAK, GOLD_CHIPS, HELP, LOCK_MOVES, comboShape, dealTray, lineHints, newMission as newMissionFor, useFreeContinue } from '../src/game.js';
@@ -292,7 +292,7 @@ test('"Fast!" meldet einen knapp verpassten Flush', () => {
 });
 
 test('Spezialzüge: Sprengen, Farbe tauschen, Passen', () => {
-  assert.ok(POWER_COSTS.fold > 0 && POWER_COSTS.blast > 0 && POWER_COSTS.recolor > 0);
+  assert.ok(POWER_COSTS.fold[0] > 0 && POWER_COSTS.blast[0] > 0 && POWER_COSTS.recolor[0] > 0);
   const game = emptyGame([bar(3), single(), single()]);
   weakRow.forEach((c, x) => (game.board[idx(x, 0)] = c));
   game.board[idx(7, 0)] = card(13, 3);
@@ -309,6 +309,72 @@ test('Spezialzüge: Sprengen, Farbe tauschen, Passen', () => {
   foldTray(game);
   assert.notEqual(JSON.stringify(game.tray), before);
   assert.equal(game.tray.filter(Boolean).length, 3);
+});
+
+test('Spezialzüge sind pro Runde begrenzt und werden teurer', () => {
+  const game = createGame(12, 'free');
+  assert.equal(powerRemaining(game, 'fold'), 3);
+  const first = powerCost(game, 'fold');
+  assert.equal(usePowerCharge(game, 'fold'), true);
+  assert.ok(powerCost(game, 'fold') > first);
+  assert.equal(powerRemaining(game, 'fold'), 2);
+  assert.equal(usePowerCharge(game, 'fold'), true);
+  assert.equal(usePowerCharge(game, 'fold'), true);
+  assert.equal(usePowerCharge(game, 'fold'), false);
+  assert.equal(powerRemaining(game, 'blast'), 1);
+});
+
+test('Profi startet bei Zwei Paaren, steigt schneller und beschränkt Hilfen', () => {
+  const game = createGame(7, 'pro');
+  assert.equal(requirementFor(0, 'pro').level, 2);
+  assert.equal(requirementFor(PRO_REQUIREMENTS[1].lines, 'pro').level, 3);
+  assert.equal(powerRemaining(game, 'fold'), 1);
+  assert.equal(powerRemaining(game, 'recolor'), 1);
+  assert.equal(powerRemaining(game, 'blast'), 0);
+  assert.equal(powerRemaining(game, 'undo'), 0);
+  assert.equal(game.startBonus, false);
+  const average = (mode) => Array.from({ length: 100 }, (_, seed) => createGame(seed + 1, mode).tray)
+    .flat().reduce((sum, piece) => sum + piece.cells.length, 0) / 300;
+  assert.ok(average('pro') > average('free'), 'Profi teilt im Mittel größere, sperrigere Formen aus');
+});
+
+test('Start-Bonus gibt nur im freien Spiel ein zusätzliches Passen', () => {
+  assert.equal(powerRemaining(createGame(1, 'free', null, { startBonus: true }), 'fold'), 4);
+  assert.equal(powerRemaining(createGame(1, 'daily', null, { startBonus: true }), 'fold'), 3);
+  assert.equal(powerRemaining(createGame(1, 'pro', null, { startBonus: true }), 'fold'), 1);
+});
+
+test('Ranglisten verwenden die neuen aktiven Boards und nicht mehr klassisch', () => {
+  assert.equal(leaderboardBoard('free'), 'standard');
+  assert.equal(leaderboardBoard('daily'), 'taeglich');
+  assert.equal(leaderboardBoard('pro'), 'profi');
+});
+
+test('Rückgängig stellt den letzten Zug exakt wieder her und ist nur einmal möglich', () => {
+  const game = createGame(25, 'free');
+  const before = JSON.parse(JSON.stringify(game));
+  const slot = game.tray.findIndex((piece) => fitsAnywhere(game.board, piece));
+  let placed = false;
+  for (let y = 0; y < SIZE && !placed; y++) for (let x = 0; x < SIZE && !placed; x++) {
+    if (canPlace(game.board, game.tray[slot], x, y)) placed = Boolean(placePiece(game, slot, x, y));
+  }
+  game.undoMeta = { wallet: 321, jackpot: 654 };
+  const result = undoLastMove(game);
+  assert.ok(result);
+  assert.deepEqual(result.meta, { wallet: 321, jackpot: 654 });
+  const expected = upgradeGameState(before);
+  expected.powers.undo = 1;
+  expected.undo = null;
+  assert.deepEqual(game, expected);
+  assert.equal(undoLastMove(game), null);
+});
+
+test('alte Spielstände werden nur ergänzt und verlieren keine Felder', () => {
+  const old = { mode: 'free', score: 123, customFutureField: { keep: true } };
+  upgradeGameState(old);
+  assert.equal(old.score, 123);
+  assert.deepEqual(old.customFutureField, { keep: true });
+  assert.deepEqual(old.powers, { fold: 0, recolor: 0, blast: 0, undo: 0 });
 });
 
 test('Spielende lässt sich mit einem Spezialzug abwenden', () => {
