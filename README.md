@@ -68,6 +68,12 @@ Block-Puzzle mit Pokerhänden für [bens-games.de](https://bens-games.de) – wi
     Glücksrad einmal am Tag gratis (Felder so groß wie ihre Chance), Spielautomat (Einsatz 10/25/50, unbegrenzt – ab dem
     21. Dreh am Tag alle 10 Drehs 50 % teurer, Rückgabe ca. 78 % des Einsatzes). Alle Gewinnchancen sind im Spiel unter „Chancen“ einsehbar.
   - **Album:** 4 Sets (Las Vegas, Eispalast, Retro-Arcade, Royal Gold); ein komplettes Set schaltet einen Bonus frei.
+  - **Aktion** (`LIMITED` in `src/shop.js`): Artikel mit `from`/`until`, nur in diesem Zeitraum kaufbar, nie aus Truhen, nicht im
+    Album. Halloween bis 10.11.2026, danach jeden Montag ein Wochen-Artikel (vorausgeplant bis 3.1.2027). Neue Wochen einfach
+    dort ergänzen.
+  - **Prestige-Truhe** (8.000): erscheint erst, wenn die feste Sammlung komplett ist; enthält 8 mythische Gold-Varianten.
+- **Erfolgsstufen:** 10 Kategorien in Bronze/Silber/Gold (`TIERED` in `src/progress.js`), jede Stufe ein eigener Erfolg
+  (auch auf bens-games.de) und +50/150/500 Chips.
 - **Profil-Erfolge** für bens-games.de: `shop_legendary`, `album_set`, `slot_jackpot`, `highroller` (50.000 Chips ausgegeben).
 
 Alle Werte stehen in `src/game.js`, `src/poker.js`, `src/pieces.js` und (Designs) `src/main.js`.

@@ -3,10 +3,10 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import {
   ALL_ITEMS, CHARMS, FREE_ITEMS, RARITY, SETS, SHOP_ITEMS, SHOP_LABELS, SHOP_SETTING, START_BONUS, THEMES, TILE_STYLES,
-  buyable, setBonus, setItems, setProgress,
+  COLLECTION, LIMITED, MYTHIC_ITEMS, buyable, daysLeft, isLimited, limitedOpen, setBonus, setItems, setProgress,
 } from '../src/shop.js';
 import {
-  CHESTS, SLOT_BETS, SLOT_CHEAP_SPINS, TICKETS, TICKET_ODDS, WHEEL, WHEEL_TOTAL, casinoDay, charmBonus, dropPool, openChestRoll,
+  CHESTS, SLOT_BETS, SLOT_CHEAP_SPINS, TICKETS, TICKET_ODDS, WHEEL, WHEEL_TOTAL, casinoDay, charmBonus, dropPool, openChestRoll, prestigeOpen,
   rollRarity, slotPrice, slotResult, slotReturn, spinSlot, spinWheel, ticketPrize, wheelAngle, withCharm,
 } from '../src/casino.js';
 
@@ -46,8 +46,8 @@ test('Katalog: eindeutige IDs, jeder Bereich hat Name, Einstellung und einen Gra
 
 test('Legendäres und Set-Boni kann man nicht direkt kaufen', () => {
   for (const item of ALL_ITEMS) {
-    if (item.rarity === 'legendary' || item.bonus) assert.equal(buyable(item), false, item.id);
-    if (item.price > 0 && item.rarity !== 'legendary' && !item.bonus) assert.equal(buyable(item), true, item.id);
+    if (item.rarity === 'legendary' || item.rarity === 'mythic' || item.bonus) assert.equal(buyable(item, '2026-10-30'), false, item.id);
+    if (item.price > 0 && !['legendary', 'mythic'].includes(item.rarity) && !item.bonus && !isLimited(item)) assert.equal(buyable(item), true, item.id);
   }
   assert.ok(ALL_ITEMS.filter((item) => item.rarity === 'legendary' && !item.bonus).length >= 5);
 });
@@ -172,6 +172,7 @@ test('Glücksbringer erhöhen nur Chips', () => {
   assert.equal(withCharm(0, 'charm-dice'), 0);
   assert.equal(withCharm(100, 'gibt-es-nicht'), 100);
   assert.ok(CHARMS.every((c) => c.bonus_chips <= 0.15));
+  assert.equal(withCharm(100, 'charm-crown'), 120, 'Prestige-Krone +20 %');
   // Punkte werden in game.js berechnet – dort darf kein Glücksbringer vorkommen
   const game = readFileSync(new URL('../src/game.js', import.meta.url), 'utf8');
   assert.doesNotMatch(game, /charm/i);
@@ -186,4 +187,48 @@ test('jeder Stil hat ein Aussehen im Stylesheet', () => {
   for (const item of SHOP_ITEMS.cards) assert.ok(has(`[data-cards="${item.id}"]`), item.id);
   for (const item of SHOP_ITEMS.theme.slice(1)) assert.ok(has(`[data-theme='${item.id}']`), item.id);
   for (const item of SHOP_ITEMS.tiles.slice(1)) assert.ok(has(`.tile.t-${item.id}`), item.id);
+});
+
+test('Aktions-Artikel: nur im Zeitraum kaufbar, nie aus Truhen, nicht in Album oder Sammlung', () => {
+  const pumpkin = LIMITED.find((item) => item.id === 'pumpkin');
+  const full = ALL_ITEMS.find((item) => item.id === 'pumpkin');
+  assert.equal(full.kind, 'tiles');
+  assert.equal(limitedOpen(full, '2026-10-26'), false);
+  assert.equal(limitedOpen(full, '2026-10-27'), true);
+  assert.equal(limitedOpen(full, '2026-11-10'), true, 'bis einschließlich 10. November');
+  assert.equal(limitedOpen(full, '2026-11-11'), false);
+  assert.equal(buyable(full, '2026-11-01'), true);
+  assert.equal(buyable(full, '2026-11-11'), false);
+  assert.equal(buyable(full), false, 'ohne Datum nie kaufbar');
+  assert.equal(daysLeft(full, '2026-11-10'), 1);
+  assert.equal(daysLeft(full, '2026-10-27'), 15);
+  assert.equal(pumpkin.event, 'Halloween');
+  const halloween = LIMITED.filter((item) => item.event === 'Halloween');
+  assert.ok(halloween.length >= 5 && halloween.every((item) => item.until === '2026-11-10'));
+  for (const rarity of Object.keys(RARITY)) assert.ok(dropPool(rarity).every((item) => !isLimited(item)));
+  assert.ok(COLLECTION.every((item) => !isLimited(item) && item.rarity !== 'mythic'));
+  for (const id of Object.keys(SETS)) assert.ok(setItems(id).every((item) => !isLimited(item)));
+});
+
+test('Wochen-Artikel: jede Woche montags ein neuer, lückenlos bis Silvester', () => {
+  const weekly = LIMITED.filter((item) => item.event === 'Wochen-Artikel').sort((a, b) => a.from.localeCompare(b.from));
+  assert.equal(weekly.length, 8);
+  for (const [k, item] of weekly.entries()) {
+    assert.equal(new Date(item.from + 'T12:00:00Z').getUTCDay(), 1, `${item.id} beginnt an einem Montag`);
+    assert.equal(daysLeft(item, item.from), 7, `${item.id} gibt es 7 Tage`);
+    if (k) assert.equal(daysLeft(weekly[k - 1], item.from), 0, 'schließt direkt an die Vorwoche an');
+  }
+  assert.equal(weekly.at(-1).until, '2027-01-03');
+});
+
+test('Prestige-Truhe: erst mit kompletter Sammlung, nur Mythisches, Doppeltes unter dem Preis', () => {
+  const all = new Set(COLLECTION.map((item) => item.id));
+  assert.equal(prestigeOpen(new Set()), false);
+  assert.equal(prestigeOpen(new Set([...all].slice(1))), false);
+  assert.equal(prestigeOpen(all), true);
+  assert.ok(MYTHIC_ITEMS.length >= 8);
+  const r = openChestRoll('prestige', all, seeded(5));
+  assert.equal(r.rarity, 'mythic');
+  assert.ok(MYTHIC_ITEMS.some((item) => item.id === r.item.id));
+  assert.ok(RARITY.mythic.dupe < CHESTS.prestige.price);
 });

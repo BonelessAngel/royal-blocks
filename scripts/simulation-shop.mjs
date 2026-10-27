@@ -6,7 +6,7 @@
 
 import { createGame, canPlace, placePiece, previewPlacement, useFreeContinue } from '../src/game.js';
 import { chestReward, dailyGift, levelFromXp, levelReward, scratchPrize, SCRATCH_EVERY, xpForRound, jackpotWin, JACKPOT_START, JACKPOT_GROWTH } from '../src/progress.js';
-import { ALL_ITEMS, FREE_ITEMS, SETS, buyable, setBonus, setProgress } from '../src/shop.js';
+import { ALL_ITEMS, COLLECTION, FREE_ITEMS, MYTHIC_ITEMS, SETS, buyable, setBonus, setProgress } from '../src/shop.js';
 import { CHESTS, WHEEL, WHEEL_TOTAL, openChestRoll, spinWheel, ticketPrize, withCharm } from '../src/casino.js';
 
 const SECONDS_PER_MOVE = 4; // gemütliches Tempo am Handy
@@ -75,7 +75,7 @@ console.log(`  Ø Punkte ${Math.round(avg('score'))}, Ø Reihen ${avg('lines').t
   ` (≈ ${Math.round((avg('moves') * SECONDS_PER_MOVE) / 60)} min), Ø Chips in der Runde ${Math.round(avg('chips'))}, Median Punkte ${median(rounds.map((r) => r.score))}`);
 
 // ---------- 2) Spieler simulieren ----------
-const everything = ALL_ITEMS.filter((item) => item.kind !== 'extras');
+const everything = COLLECTION; // ohne Aktions-Artikel und ohne Prestige
 const wheelEV = WHEEL.reduce((s, f) => s + (f.chips ?? 0) * f.weight, 0) / WHEEL_TOTAL;
 
 function simulatePlayer(roundsPerDay, rand) {
@@ -156,7 +156,18 @@ function simulatePlayer(roundsPerDay, rand) {
     const buyableDone = everything.filter(buyable).every((i) => owned.has(i.id));
     if (buyableDone && !milestones.buyable) milestones.buyable = { days: d + 1, games, hours: minutes / 60 };
     if (spent >= 50_000 && !milestones.highroller) milestones.highroller = { days: d + 1, games, hours: minutes / 60 };
-    if (ownsAll()) return { ...milestones, all: { days: d + 1, games, hours: minutes / 60 } };
+    if (ownsAll() && !milestones.all) milestones.all = { days: d + 1, games, hours: minutes / 60 };
+    // Danach: Prestige-Truhen, bis alles Mythische da ist
+    if (milestones.all) {
+      while (wallet >= CHESTS.prestige.price && MYTHIC_ITEMS.some((i) => !owned.has(i.id))) {
+        wallet -= CHESTS.prestige.price;
+        const r = openChestRoll('prestige', owned, rand);
+        if (r.duplicate) wallet += r.chips;
+        else owned.add(r.item.id);
+      }
+      if (owned.has('charm-crown')) charm = 'charm-crown';
+      if (MYTHIC_ITEMS.every((i) => owned.has(i.id))) return { ...milestones, prestige: { days: d + 1, games, hours: minutes / 60 } };
+    }
   }
   return { ...milestones, all: null };
 }
@@ -175,5 +186,6 @@ for (const perDay of [3, 8, 15, 30]) {
   console.log(`\n${perDay} Runden pro Tag (Median aus 200 Spielern):`);
   console.log(`  alles Kaufbare:  ${fmtStep(pick('buyable'))}`);
   console.log(`  Highroller:      ${fmtStep(pick('highroller'))}`);
-  console.log(`  wirklich alles:  ${fmtStep(pick('all'))}`);
+  console.log(`  feste Sammlung:  ${fmtStep(pick('all'))}`);
+  console.log(`  + Prestige:      ${fmtStep(pick('prestige'))}`);
 }

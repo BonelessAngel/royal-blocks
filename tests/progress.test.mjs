@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { ACHIEVEMENTS, GIFT_DAYS, chestReward, dailyGift, earnedAchievements, levelFromXp, levelReward, praiseFor, xpForRound, xpToNext } from '../src/progress.js';
+import { TIERED, TIERS, tierProgress, ACHIEVEMENTS, GIFT_DAYS, chestReward, dailyGift, earnedAchievements, levelFromXp, levelReward, praiseFor, xpForRound, xpToNext } from '../src/progress.js';
 
 test('Level aus Erfahrung', () => {
   assert.deepEqual(levelFromXp(0), { level: 1, into: 0, need: xpToNext(1) });
@@ -90,9 +90,12 @@ test('Statistik zählt Hände, Reihen und Runden', async () => {
 test('Erfolge werden aus dauerhaftem Fortschritt reproduzierbar abgeleitet', () => {
   const xp25 = Array.from({ length: 24 }, (_, index) => xpToNext(index + 1)).reduce((sum, value) => sum + value, 0);
   const ids = earnedAchievements({
-    stats: { hands: Array(10).fill(0).map((value, index) => index === 9 ? 1 : value), jackpots: 10 },
+    stats: {
+      hands: [0, 0, 0, 0, 0, 200, 100, 50, 0, 1], jackpots: 10, lines: 5000, games: 500, missions: 500,
+      chipsEarned: 500_000, bestStreak: 25, golden: 500,
+    },
     xp: xp25, gift: { streak: 7 }, proBest: 25_000,
-    casino: { slotJackpots: 1, spent: 50_000 }, legendary: true, setDone: true,
+    casino: { slotJackpots: 1, spent: 50_000, chests: 200 }, legendary: true, setDone: true, prestigeDone: true,
   });
   assert.deepEqual(new Set(ids), new Set(Object.keys(ACHIEVEMENTS)));
   for (const achievement of Object.values(ACHIEVEMENTS)) {
@@ -113,4 +116,19 @@ test('achievements.json passt zu den Erfolgen im Spiel', async () => {
   const json = JSON.parse(readFileSync(new URL('../src/achievements.json', import.meta.url), 'utf8'));
   assert.deepEqual(Object.keys(json).sort(), Object.keys(ACHIEVEMENTS).sort());
   for (const [id, a] of Object.entries(ACHIEVEMENTS)) assert.equal(json[id].name, a.name);
+});
+
+test('Erfolgsstufen: Bronze, Silber, Gold je Kategorie, jede Stufe ein eigener Erfolg mit Chips', () => {
+  assert.equal(TIERED.length, 10);
+  for (const cat of TIERED) {
+    assert.ok(cat.goals[0] < cat.goals[1] && cat.goals[1] < cat.goals[2], cat.id);
+    for (const tier of TIERS) assert.ok(ACHIEVEMENTS[`${cat.id}_${tier}`], `${cat.id}_${tier}`);
+  }
+  const flush = TIERED.find((c) => c.id === 'flush');
+  assert.deepEqual(tierProgress(flush, { hands: [0, 0, 0, 0, 0, 12] }), { value: 12, reached: 1, next: 50 });
+  assert.deepEqual(tierProgress(flush, { hands: [0, 0, 0, 0, 0, 999] }), { value: 999, reached: 3, next: null });
+  const ids = earnedAchievements({ stats: { hands: [0, 0, 0, 0, 0, 60] } });
+  assert.deepEqual(ids.filter((id) => id.startsWith('flush_')), ['flush_bronze', 'flush_silver']);
+  assert.deepEqual([ACHIEVEMENTS.flush_bronze.chips, ACHIEVEMENTS.flush_silver.chips, ACHIEVEMENTS.flush_gold.chips], [50, 150, 500]);
+  assert.deepEqual(earnedAchievements({ casino: { chests: 10 } }), ['chests_bronze'], 'Truhen zählen aus dem Casino-Stand');
 });
