@@ -18,6 +18,7 @@ export const BUILD_FILES = [
   'storage.js',
   'progress.js',
   'scratch.js',
+  'casino.js',
   'achievements.json',
   'manifest.webmanifest',
   'sw.js',

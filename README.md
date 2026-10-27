@@ -40,7 +40,9 @@ Block-Puzzle mit Pokerhänden für [bens-games.de](https://bens-games.de) – wi
 - **Goldene Karte** (etwa jedes 10. Teil): doppelte Punkte für ihre Reihe, +15 Chips, Gold-Regen.
 - **Fieber:** bei Serie 5, 10, 15 … zählen 6 Züge lang Punkte und Chips doppelt; Feld glüht, Musik auf voller Stärke.
 - **Jackpot:** startet bei 500 Chips, wächst pro beendeter Runde um 40. Royal Flush gewinnt alles, Straight Flush ein Viertel.
-- **Startbildschirm** mit Level, Chips, Jackpot, Rekord, Spielen/Tages-Challenge, Designs, Statistik, Regeln.
+- **Modi:** **Normal** (Rangliste `standard`) und **Hart** (ab Level 10, Rangliste `profi` – die Kennungen bleiben, damit alte
+  Rekorde gültig bleiben), dazu die **Tages-Challenge** als Extra (Rangliste `taeglich`).
+- **Startbildschirm** mit Level, Chips, Jackpot, Rekord, Normal/Hart/Tages-Challenge, Shop, Erfolge, Statistik, Regeln.
 - **Rubbellos** jede 3. beendete Runde (40–750 Chips), **Statistik-Seite**, **Teilen** über das Teilen-Menü des Geräts
   (ohne Server; sonst Text in die Zwischenablage).
 - **Joker ★:** etwa jedes 25. Teil hat ein Joker-Kästchen, das als die Karte zählt, die die beste Hand ergibt.
@@ -58,8 +60,15 @@ Block-Puzzle mit Pokerhänden für [bens-games.de](https://bens-games.de) – wi
 - **iPad:** hochkant größeres Feld und größere Schrift; quer Feld links, Punkte, Auftrag, Spezialzüge und Ablage rechts.
   Die installierte App darf gedreht werden.
 - **Musik:** im Browser erzeugter Synthwave-Takt, wird mit der Serie voller; eigener Schalter im Menü.
-- **Designs** (mit Chips freischaltbar): Farbwelten Neon, Gold-Casino (1.500), Eis (3.000), Retro-Arcade (5.000);
-  Kachel-Stile Standard, Glas (1.000), Pixel (2.000), Chip (4.000).
+- **Casino-Shop** (`src/shop.js` Katalog, `src/casino.js` Glücks-Regeln, bezahlt nur mit Chips aus dem Spiel):
+  - **Kaufen:** Designs, Kacheln (auch animierte), Effekte, Hintergründe, Karten, Rahmen, Sound-Pakete, Jingles, Chip-Designs,
+    Glücksbringer (+5 bis +15 % Chips, nie mehr Punkte), Start-Bonus. Seltenheiten Gewöhnlich/Selten/Episch/Legendär;
+    Legendäres gibt es nur aus Truhen, dem Glücksrad oder dem Automaten. Kauf erst beim zweiten Tippen.
+  - **Glück:** Truhen (Bronze 400, Silber 1.200, Gold 3.000 – Doppeltes wird zu Chips), Rubbellose (50/150/400),
+    Glücksrad einmal am Tag gratis (Felder so groß wie ihre Chance), Spielautomat (Einsatz 10/25/50, höchstens 20 Drehs
+    am Tag, Rückgabe ca. 78 %). Alle Gewinnchancen sind im Spiel unter „Chancen“ einsehbar.
+  - **Album:** 4 Sets (Las Vegas, Eispalast, Retro-Arcade, Royal Gold); ein komplettes Set schaltet einen Bonus frei.
+- **Profil-Erfolge** für bens-games.de: `shop_legendary`, `album_set`, `slot_jackpot`, `highroller` (50.000 Chips ausgegeben).
 
 Alle Werte stehen in `src/game.js`, `src/poker.js`, `src/pieces.js` und (Designs) `src/main.js`.
 
@@ -83,7 +92,8 @@ Voraussetzung: [Node.js](https://nodejs.org) ab Version 20. Es gibt **keine** Ab
 | `src/pieces.js` | Formen der Teile, Karten, Zufall |
 | `src/game.js` | Spielregeln ohne Anzeige: Setzen, Abräumen, Punkte, Spielende |
 | `src/main.js` | Anzeige, Ziehen, Effekte, Menü |
-| `src/platform.js` | Ausfallsichere Statistik- und Ranglisten-Anbindung der Plattform |
+| `src/platform.js` | Ausfallsichere Statistik-, Ranglisten- und Fehlermelde-Anbindung der Plattform |
+| `src/shop.js`, `src/casino.js` | Shop-Katalog, Seltenheiten, Sets; Truhen, Lose, Glücksrad, Automat, Glücksbringer |
 | `src/fx.js`, `src/audio.js` | Partikel, Töne (im Browser erzeugt), Vibration |
 | `src/storage.js` | Rekorde, Chips, Designs, Einstellungen und laufende Runden im Browser (`localStorage`, Präfix `royal-blocks:`) |
 | `src/sw.js` | Service Worker (Vorlage, der Build setzt Cache-Name und Dateiliste ein) |
@@ -104,8 +114,8 @@ Voraussetzung: [Node.js](https://nodejs.org) ab Version 20. Es gibt **keine** Ab
 Dateiliste des Builds (gleich wie `scripts/files.mjs`):
 
 ```
-index.html, style.css, main.js, platform.js, game.js, poker.js, pieces.js, audio.js, fx.js, storage.js, progress.js, scratch.js,
-manifest.webmanifest, sw.js, icon-180.png, icon-192.png, icon-512.png
+index.html, style.css, main.js, platform.js, shop.js, game.js, poker.js, pieces.js, audio.js, fx.js, storage.js, progress.js,
+scratch.js, casino.js, achievements.json, manifest.webmanifest, sw.js, icon-180.png, icon-192.png, icon-512.png
 ```
 
 Anforderungen (geprüft in `tests/build.test.mjs`): eigene Dateien nur über relative Pfade, Ranglisten-Link zur Plattform,
@@ -115,7 +125,8 @@ eigener Service Worker nur für den Spielordner, löscht nur eigene Caches (`roy
 Spielstände, Einstellungen und Fortschritt bleiben im Browser. In Release-Builds sendet das Spiel die in der Plattform-Schnittstelle
 festgelegten anonymen Nutzungsereignisse; bei angemeldeten Konten zusätzlich Bestwerte für die Rangliste. Freitexte, Namen,
 E-Mail-Adressen und Konto-IDs werden nie vom Spiel gesendet. Im Dev-/Testmodus, auf localhost und bei aktiviertem Global Privacy
-Control bleibt die Anbindung vollständig aus. Netzwerkfehler beeinflussen das Spiel nicht.
+Control bleibt die Anbindung vollständig aus. Netzwerkfehler beeinflussen das Spiel nicht. Unerwartete Fehler meldet das Spiel
+anonym an `/api/errors` (höchstens 5 pro Besuch, ohne Konto- oder Spielstanddaten).
 
 ## Zuständigkeit
 

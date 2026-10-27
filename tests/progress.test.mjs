@@ -92,10 +92,25 @@ test('Erfolge werden aus dauerhaftem Fortschritt reproduzierbar abgeleitet', () 
   const ids = earnedAchievements({
     stats: { hands: Array(10).fill(0).map((value, index) => index === 9 ? 1 : value), jackpots: 10 },
     xp: xp25, gift: { streak: 7 }, proBest: 25_000,
+    casino: { slotJackpots: 1, spent: 50_000 }, legendary: true, setDone: true,
   });
   assert.deepEqual(new Set(ids), new Set(Object.keys(ACHIEVEMENTS)));
   for (const achievement of Object.values(ACHIEVEMENTS)) {
     assert.ok(achievement.name.length > 3);
     assert.equal([...achievement.icon].length <= 2, true);
+    assert.ok(achievement.how.length > 5, 'jeder Erfolg sagt, wie man ihn bekommt');
   }
+});
+
+test('die vier Profil-Erfolge haben genau die mit der Webseite vereinbarten IDs', () => {
+  const profile = Object.entries(ACHIEVEMENTS).filter(([, a]) => a.profile).map(([id]) => id).sort();
+  assert.deepEqual(profile, ['album_set', 'highroller', 'shop_legendary', 'slot_jackpot']);
+  assert.deepEqual(earnedAchievements({ casino: { spent: 49_999 } }), [], 'Highroller erst ab 50.000');
+});
+
+test('achievements.json passt zu den Erfolgen im Spiel', async () => {
+  const { readFileSync } = await import('node:fs');
+  const json = JSON.parse(readFileSync(new URL('../src/achievements.json', import.meta.url), 'utf8'));
+  assert.deepEqual(Object.keys(json).sort(), Object.keys(ACHIEVEMENTS).sort());
+  for (const [id, a] of Object.entries(ACHIEVEMENTS)) assert.equal(json[id].name, a.name);
 });

@@ -232,3 +232,47 @@ test('eine spätere Anmeldung wird nach einer anonym gestarteten Runde erkannt',
   assert.equal(accountChecks, 2);
   assert.equal(scorePosts, 1);
 });
+
+test('Fehlermeldungen nur auf der Plattform, nur diese Felder, höchstens 5 und jeden Fehler nur einmal', async () => {
+  const calls = [];
+  const env = setup(async (url, options) => {
+    calls.push({ url, options });
+    return response({}, false, 500);
+  });
+  assert.equal(env.client.reportError({ message: 'Boom', source: 'main.js', line: 7, col: 3, stack: 'x'.repeat(5000) }), true);
+  assert.equal(env.client.reportError({ message: 'Boom', line: 7 }), false, 'gleicher Fehler nur einmal');
+  for (let k = 0; k < 10; k++) env.client.reportError({ message: `Fehler ${k}` });
+  assert.equal(calls.length, 5, 'höchstens 5 Meldungen pro Besuch');
+  assert.equal(calls[0].url, '/api/errors');
+  assert.equal(calls[0].options.credentials, 'same-origin');
+  assert.equal(calls[0].options.keepalive, true);
+  const body = JSON.parse(calls[0].options.body);
+  assert.deepEqual(Object.keys(body).sort(), ['app', 'col', 'line', 'message', 'source', 'stack']);
+  assert.equal(body.app, 'royal-blocks');
+  assert.equal(body.stack.length, 3000);
+
+  const local = [];
+  const offline = createPlatformClient({
+    version: 'dev', fetchImpl: async (url) => { local.push(url); return response(); },
+    locationObject: { hostname: 'localhost', pathname: '/games/royal-blocks/', protocol: 'http:' },
+  });
+  assert.equal(offline.reportError({ message: 'lokal' }), false);
+  const gpc = createPlatformClient({
+    version: '1.7.0', fetchImpl: async (url) => { local.push(url); return response(); },
+    locationObject: { hostname: 'bens-games.de', pathname: '/games/royal-blocks/', protocol: 'https:' },
+    navigatorObject: { globalPrivacyControl: true },
+  });
+  assert.equal(gpc.reportError({ message: 'gpc' }), false);
+  assert.equal(local.length, 0, 'lokal und mit GPC wird nichts gesendet');
+});
+
+test('Fehler und abgelehnte Versprechen werden abgefangen', () => {
+  const calls = [];
+  const env = setup(async (url, options) => { calls.push(JSON.parse(options.body)); return response(); });
+  const listeners = {};
+  assert.equal(env.client.watchErrors({ addEventListener(type, fn) { listeners[type] = fn; } }), true);
+  listeners.error({ message: 'Kaputt', filename: 'game.js', lineno: 3, colno: 4, error: { stack: 'trace' } });
+  listeners.unhandledrejection({ reason: new Error('Versprechen') });
+  assert.deepEqual(calls.map((c) => c.message), ['Kaputt', 'Versprechen']);
+  assert.equal(env.client.watchErrors({}), false, 'ohne addEventListener kein Absturz');
+});
