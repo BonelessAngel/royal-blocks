@@ -1,6 +1,6 @@
 {
   "name": "royal-blocks",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "private": true,
   "description": "Block-Puzzle mit Pokerhänden für bens-games.de",
   "type": "module",

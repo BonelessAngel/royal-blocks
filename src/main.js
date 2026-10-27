@@ -14,8 +14,8 @@ import {
   ALL_ITEMS, FREE_ITEMS, RARITY, SETS, SHOP_ITEMS, SHOP_LABELS, SHOP_SETTING, THEMES, buyable, setBonus, setItems, setProgress,
 } from './shop.js';
 import {
-  CHESTS, SLOT_BETS, SLOT_DAILY_SPINS, SLOT_SYMBOLS, TICKETS, TICKET_ODDS, WHEEL, WHEEL_TOTAL, casinoDay, dropPool, openChestRoll,
-  slotOdds, slotReturn, spinSlot, spinWheel, ticketPrize, wheelAngle, withCharm,
+  CHESTS, SLOT_BETS, SLOT_CHEAP_SPINS, SLOT_SYMBOLS, TICKETS, TICKET_ODDS, WHEEL, WHEEL_TOTAL, casinoDay, dropPool, openChestRoll,
+  slotOdds, slotPrice, slotReturn, spinSlot, spinWheel, ticketPrize, wheelAngle, withCharm,
 } from './casino.js';
 import { HANDS, SUITS, rankLabel } from './poker.js';
 import {
@@ -1299,9 +1299,8 @@ function luckView() {
     cls: 'wheel-card', icon: '🎡', title: 'Glücksrad', text: wheelFree ? 'Heute gratis drehen!' : 'Morgen wieder gratis',
     button: [document.createTextNode(wheelFree ? 'Gratis drehen' : 'Ansehen')], data: { action: 'open-wheel' }, odds: 'wheel',
   }));
-  const spinsLeft = SLOT_DAILY_SPINS - casino.spins;
   wrap.append(luckCard({
-    cls: 'slot-card', icon: '🎰', title: 'Spielautomat', text: `Einsatz ${SLOT_BETS.join(' / ')} · noch ${spinsLeft} von ${SLOT_DAILY_SPINS} Drehs heute`,
+    cls: 'slot-card', icon: '🎰', title: 'Spielautomat', text: casino.spins < SLOT_CHEAP_SPINS ? `Einsatz ${SLOT_BETS.join(' / ')} · noch ${SLOT_CHEAP_SPINS - casino.spins} Drehs zum Normalpreis` : `Heute schon ${casino.spins} Drehs – jetzt teurer`,
     button: [document.createTextNode('Spielen')], data: { action: 'open-slot' }, odds: 'slot',
   }));
   wrap.append(el('h3', '', 'Truhen'));
@@ -1559,7 +1558,6 @@ let slotBusy = false;
 const SLOT_ICON = Object.fromEntries(SLOT_SYMBOLS.map((s) => [s.id, s.icon]));
 function renderSlot() {
   refreshCasinoDay();
-  const left = SLOT_DAILY_SPINS - casino.spins;
   $('slot-bets').replaceChildren(...SLOT_BETS.map((bet) => {
     const b = el('button', `btn small-btn${bet === slotBet ? ' active' : ''}`);
     b.type = 'button';
@@ -1567,9 +1565,13 @@ function renderSlot() {
     b.append(...priceLabel(bet));
     return b;
   }));
-  $('slot-spin').disabled = slotBusy || left <= 0 || wallet < slotBet;
-  $('slot-spin').textContent = left <= 0 ? 'Morgen wieder' : `Drehen · ${slotBet}`;
-  $('slot-left').textContent = `Noch ${left} von ${SLOT_DAILY_SPINS} Drehs heute · Guthaben ${fmt(wallet)} Chips`;
+  const price = slotPrice(slotBet, casino.spins);
+  $('slot-spin').disabled = slotBusy || wallet < price;
+  $('slot-spin').textContent = price > slotBet ? `Drehen · ${fmt(price)} (Einsatz ${slotBet})` : `Drehen · ${slotBet}`;
+  const cheap = SLOT_CHEAP_SPINS - casino.spins;
+  $('slot-left').textContent = cheap > 0
+    ? `Noch ${cheap} Drehs heute zum Normalpreis, danach wird es teurer · Guthaben ${fmt(wallet)} Chips`
+    : `Heute schon ${casino.spins} Drehs – jeder Dreh kostet jetzt ${fmt(price)} Chips · Guthaben ${fmt(wallet)} Chips`;
 }
 function openSlot() {
   for (const strip of document.querySelectorAll('.reel-strip')) {
@@ -1582,7 +1584,7 @@ function openSlot() {
 }
 function spinTheSlot() {
   refreshCasinoDay();
-  if (slotBusy || casino.spins >= SLOT_DAILY_SPINS || !spend(slotBet)) return;
+  if (slotBusy || !spend(slotPrice(slotBet, casino.spins))) return;
   casino.spins++;
   saveCasino();
   const bet = slotBet;
@@ -1670,7 +1672,7 @@ function showOdds(what) {
     for (const field of WHEEL) rows.push([`${WHEEL_ICONS[field.label] ?? '◉'} ${field.label}${field.chips ? ' Chips' : ''}`, pct(field.weight / WHEEL_TOTAL), '']);
   } else if (what === 'slot') {
     title = 'Gewinntabelle';
-    note = `Jede Walze dreht unabhängig. Höchstens ${SLOT_DAILY_SPINS} Drehs am Tag. Im Schnitt gibt der Automat ${Math.round(slotReturn() * 100)} von 100 gesetzten Chips zurück.`;
+    note = `Jede Walze dreht unabhängig. Die ersten ${SLOT_CHEAP_SPINS} Drehs am Tag kosten den Einsatz, danach wird jeder Dreh teurer (alle 10 Drehs +50 %), die Gewinne bleiben gleich. Im Schnitt gibt der Automat ${Math.round(slotReturn() * 100)} von 100 gesetzten Chips zurück.`;
     for (const row of slotOdds()) rows.push([row.label, pct(row.chance), row.pays === 'jackpot' ? 'Legendärer Gegenstand' : `${row.pays} × Einsatz`]);
   }
   $('odds-title').textContent = title;

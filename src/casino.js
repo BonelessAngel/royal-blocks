@@ -112,7 +112,15 @@ export const SLOT_SYMBOLS = [
 ];
 const SLOT_TOTAL = SLOT_SYMBOLS.reduce((sum, s) => sum + s.weight, 0);
 export const SLOT_BETS = [10, 25, 50];
-export const SLOT_DAILY_SPINS = 20;
+// Unbegrenzt drehen: die ersten 20 Drehs am Tag kosten genau den Einsatz, danach alle 10 Drehs 50 % mehr.
+// Gewinne richten sich immer nach dem Einsatz – Vieldrehen lohnt sich also immer weniger.
+export const SLOT_CHEAP_SPINS = 20;
+export const SLOT_STEP_SPINS = 10;
+export const SLOT_STEP_RAISE = 0.5;
+export function slotPrice(bet, spinsToday) {
+  const steps = spinsToday < SLOT_CHEAP_SPINS ? 0 : 1 + Math.floor((spinsToday - SLOT_CHEAP_SPINS) / SLOT_STEP_SPINS);
+  return Math.round(bet * (1 + SLOT_STEP_RAISE * steps));
+}
 export const SLOT_PAYS = { crown: 'jackpot', seven: 50, bell: 20, spade: 8, heart: 8, cherry: 5 };
 export const SLOT_TWO_CHERRIES = 2;
 // Hauptgewinn: ein legendärer Gegenstand – wenn man schon alle hat, 200× Einsatz

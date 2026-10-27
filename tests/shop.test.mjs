@@ -6,8 +6,8 @@ import {
   buyable, setBonus, setItems, setProgress,
 } from '../src/shop.js';
 import {
-  CHESTS, SLOT_BETS, SLOT_DAILY_SPINS, TICKETS, TICKET_ODDS, WHEEL, WHEEL_TOTAL, casinoDay, charmBonus, dropPool, openChestRoll,
-  rollRarity, slotResult, slotReturn, spinSlot, spinWheel, ticketPrize, wheelAngle, withCharm,
+  CHESTS, SLOT_BETS, SLOT_CHEAP_SPINS, TICKETS, TICKET_ODDS, WHEEL, WHEEL_TOTAL, casinoDay, charmBonus, dropPool, openChestRoll,
+  rollRarity, slotPrice, slotResult, slotReturn, spinSlot, spinWheel, ticketPrize, wheelAngle, withCharm,
 } from '../src/casino.js';
 
 // Zufallsfolge zum Nachrechnen
@@ -129,10 +129,9 @@ test('Glücksrad: Felder so groß wie ihre Chance, Treffer passt zur Zeigerstell
   }
 });
 
-test('Spielautomat: Auszahlung unter 100 %, ehrliche Walzen, Tageslimit 20', () => {
+test('Spielautomat: Auszahlung unter 100 %, ehrliche Walzen', () => {
   const rtp = slotReturn();
   assert.ok(rtp > 0.6 && rtp < 0.95, `Rückgabe ${rtp}`);
-  assert.equal(SLOT_DAILY_SPINS, 20);
   assert.deepEqual(slotResult(['crown', 'crown', 'crown'], 10), { win: 2000, jackpot: true });
   assert.deepEqual(slotResult(['seven', 'seven', 'seven'], 25), { win: 1250, jackpot: false });
   assert.deepEqual(slotResult(['cherry', 'bell', 'cherry'], 10), { win: 20, jackpot: false });
@@ -144,6 +143,17 @@ test('Spielautomat: Auszahlung unter 100 %, ehrliche Walzen, Tageslimit 20', () 
   const n = 60_000;
   for (let k = 0; k < n; k++) paid += spinSlot(SLOT_BETS[0], rand).win;
   assert.ok(Math.abs(paid / (n * SLOT_BETS[0]) - rtp) < 0.06, `gemessen ${paid / (n * SLOT_BETS[0])}, berechnet ${rtp}`);
+});
+
+test('Automat: unbegrenzt drehen, ab dem 21. Dreh am Tag wird es teurer', () => {
+  assert.equal(SLOT_CHEAP_SPINS, 20);
+  assert.equal(slotPrice(10, 0), 10);
+  assert.equal(slotPrice(10, 19), 10, 'die ersten 20 Drehs zum Einsatz');
+  assert.equal(slotPrice(10, 20), 15);
+  assert.equal(slotPrice(10, 29), 15);
+  assert.equal(slotPrice(10, 30), 20);
+  assert.equal(slotPrice(50, 100), 50 * 5.5);
+  for (let n = 1; n < 200; n++) assert.ok(slotPrice(25, n) >= slotPrice(25, n - 1), 'Preis sinkt nie');
 });
 
 test('Tageswerte: Glücksrad und Automat setzen sich am neuen Tag zurück, Zähler bleiben', () => {
