@@ -65,9 +65,15 @@ Block-Puzzle mit Pokerhänden für [bens-games.de](https://bens-games.de) – wi
     Glücksbringer (+5 bis +15 % Chips, nie mehr Punkte), Start-Bonus. Seltenheiten Gewöhnlich/Selten/Episch/Legendär;
     Legendäres gibt es nur aus Truhen, dem Glücksrad oder dem Automaten. Kauf erst beim zweiten Tippen.
   - **Glück:** Truhen (Bronze 400, Silber 1.200, Gold 3.000 – Doppeltes wird zu Chips), Rubbellose (50/150/400),
-    Glücksrad einmal am Tag gratis (Felder so groß wie ihre Chance), Spielautomat (Einsatz 10/25/50, höchstens 20 Drehs
-    am Tag, Rückgabe ca. 78 %). Alle Gewinnchancen sind im Spiel unter „Chancen“ einsehbar.
+    Glücksrad einmal am Tag gratis (Felder so groß wie ihre Chance), Spielautomat (Einsatz 10/25/50, unbegrenzt – ab dem
+    21. Dreh am Tag alle 10 Drehs 50 % teurer, Rückgabe ca. 78 % des Einsatzes). Alle Gewinnchancen sind im Spiel unter „Chancen“ einsehbar.
   - **Album:** 4 Sets (Las Vegas, Eispalast, Retro-Arcade, Royal Gold); ein komplettes Set schaltet einen Bonus frei.
+  - **Aktion** (`LIMITED` in `src/shop.js`): Artikel mit `from`/`until`, nur in diesem Zeitraum kaufbar, nie aus Truhen, nicht im
+    Album. Halloween bis 10.11.2026, danach jeden Montag ein Wochen-Artikel (vorausgeplant bis 3.1.2027). Neue Wochen einfach
+    dort ergänzen.
+  - **Prestige-Truhe** (8.000): erscheint erst, wenn die feste Sammlung komplett ist; enthält 8 mythische Gold-Varianten.
+- **Erfolgsstufen:** 10 Kategorien in Bronze/Silber/Gold (`TIERED` in `src/progress.js`), jede Stufe ein eigener Erfolg
+  (auch auf bens-games.de) und +50/150/500 Chips.
 - **Profil-Erfolge** für bens-games.de: `shop_legendary`, `album_set`, `slot_jackpot`, `highroller` (50.000 Chips ausgegeben).
 
 Alle Werte stehen in `src/game.js`, `src/poker.js`, `src/pieces.js` und (Designs) `src/main.js`.
@@ -83,6 +89,7 @@ Voraussetzung: [Node.js](https://nodejs.org) ab Version 20. Es gibt **keine** Ab
 | `npm run preview` | baut und startet das fertige Spiel: http://localhost:5174/games/royal-blocks/ |
 | `npm test` | alle Tests (Pokerhände, Regeln, Build-Anforderungen der Plattform) |
 | `npm run icons` | zeichnet die App-Symbole in `src/` neu |
+| `node scripts/simulation-shop.mjs` | Bot spielt Runden und rechnet aus, wie lange man bis „alles freigeschaltet“ braucht |
 
 ## Aufbau
 
